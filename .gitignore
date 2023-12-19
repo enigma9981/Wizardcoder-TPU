@@ -1,0 +1,13 @@
+build*
+
+a.out
+
+opt-*
+
+.cache
+
+texts
+
+*.py
+
+.vscode
