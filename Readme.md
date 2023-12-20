@@ -23,16 +23,5 @@ ninja
 ```
 ### Inference
 
-完成上文的编译过程后，生成```build/demo/demo```可执行文件，它可以完成加载bmodel并在```BM1684X```设备上进行推理。执行```build/demo/demo -h```可以查看参数含义
-
-> OPT-6.7B Implementation On Sophon BM1684X  
-> Usage:  
->  OPT-TPU [OPTION...]  
->
->  -m, --model_path arg  bmodel path
->  -n, --new_length arg  new max length (default: 20)
->  -c, --custom_input    custom_input  
->  -d, --dev_id arg      TPU device id (default: 0)  
->  -h, --help            Print usage  
-
+完成上文的编译过程后，生成```build/demo/demo```可执行文件，它可以完成加载bmodel并在```BM1684X```设备上进行推理。执行```build/demo/demo -h```可以查看参数含义。
 加上```-c```表明使用用户输入，否则会自动使用默认的输入展示
