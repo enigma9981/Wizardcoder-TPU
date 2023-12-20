@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
     } else {
         std::cout << "No user input, using builtin prompts:\n";
         auto prompts = std::vector<std::string>{
-                "Question: if x is 12 and y is 9, what is x + y?\nAnswer: ",
+                "Question: if x is 2 and y is 5, what is x + y?\nAnswer: 7\n\nQuestion: if x is 12 and y is 9, what is x + y?\nAnswer: ",
                 "What is the color of a carrot?\nA:",
                 "What are we having for dinner?",
                 "My name is Linda ",
