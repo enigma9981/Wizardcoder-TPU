@@ -1,6 +1,7 @@
 #include <simdjson.h>
 #include <string>
 #include <utility>
+#include <vector>
 #include "ctre-unicode.hpp"
 #include "include/tokenizer.h"
 
@@ -69,9 +70,8 @@ static constexpr ctll::fixed_string pattern{
 std::unordered_map<std::string, char> unicode_to_bytes() {
     static std::unordered_map<std::string, char> code_map;
     auto                                         map = bytes_to_unicode();
-    for (auto&& [k, v] : map) {
+    for (auto&& [k, v] : map)
         code_map[v] = k;
-    }
     return code_map;
 }
 
@@ -187,6 +187,10 @@ std::string GPT2Tokenizer::decode(
     if (skip_special_token && m_special_tokens.contains(decoded_string))
         decoded_string = " ";
     return decoded_string;
+}
+
+std::string GPT2Tokenizer::decode_id(int id, bool skip_special_token) {
+    return decode(std::vector<int>{id}, skip_special_token);
 }
 
 std::vector<int> GPT2Tokenizer::encode(std::string_view input_text) {

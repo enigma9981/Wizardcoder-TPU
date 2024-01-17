@@ -2,6 +2,7 @@
 #define TOKENIZER_H
 
 #include <bits/stdc++.h>
+#include <string>
 template <class T>
 inline void hash_combine(std::size_t& seed, const T& v) {
     std::hash<T> hasher;
@@ -35,6 +36,7 @@ struct GPT2Tokenizer {
 
     std::vector<int>         encode(std::string_view);
     std::string              decode(const std::vector<int>&, bool);
+    std::string              decode_id(int id, bool);
     std::vector<std::string> bpe(const std::string&);
     std::vector<std::string> tokenize(std::string_view);
 

@@ -4,7 +4,7 @@ endif()
 
 
 if(NOT DEFINED LIBSOPHON_DIR)
-    set(LIBSOPHON_DIR "/opt/sophon/libsophon-current" CACHE STRING "The directory of libsophon")
+    set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/demo/libsophon_pcie CACHE STRING "The directory of libsophon")
 endif()
 message(STATUS "LIBSOPHON_DIR is set to: ${LIBSOPHON_DIR}")
 
@@ -31,21 +31,37 @@ FetchContent_Declare(
   GIT_TAG        v3.6.3
 )
 
-FetchContent_MakeAvailable(ctre cxxopts simdjson)
+
+FetchContent_Declare(
+  cnpy
+  GIT_REPOSITORY https://github.com/rogersce/cnpy.git
+)
+
+FetchContent_MakeAvailable(ctre cxxopts simdjson cnpy)
 
 
-file(GLOB OPT_SRC gpt2tokenizer.cc opt.cc)
-add_library(tpuopt ${OPT_SRC})
-target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
-target_link_libraries(tpuopt PRIVATE simdjson::simdjson ctre bmlib bmrt)
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
 
 
-file(GLOB DEMO_SRC demo.cc)
-add_executable(demo ${DEMO_SRC})
+
+# SET(ONNXRUNTIME_DIR ${CMAKE_SOURCE_DIR}/third_party/onnxruntime)
+
+
 include_directories(${LIBSOPHON_DIR}/include)
-target_link_directories(demo PRIVATE ${LIBSOPHON_DIR}/lib)
-target_link_libraries(demo PRIVATE tpuopt cxxopts)
+file(GLOB OPT_SRC gpt2tokenizer.cc wizardcoder.cc opt.cc)
+add_library(tpuopt ${OPT_SRC})
+target_include_directories(tpuopt PRIVATE ${CNPY_SOURCE_DIR})
+target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
+
+# target_include_directories(tpuopt PRIVATE ${ONNXRUNTIME_DIR}/include)
+# target_link_directories(tpuopt PRIVATE ${ONNXRUNTIME_DIR}/lib)
+
+target_link_libraries(tpuopt PRIVATE simdjson::simdjson ctre bmlib bmrt cnpy)
 
 
 
-
+add_subdirectory(bin)
