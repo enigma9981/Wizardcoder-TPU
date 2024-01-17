@@ -393,7 +393,7 @@ void WizardCoderImpl::move2end(const bm_tensor_t& cache) {
 }
 
 int WizardCoderImpl::forward_next() {
-    int                pid = token_length;
+    int                pid = token_length - 1;
     std::vector<void*> input_pid_data{&pid};
     std::vector<int>   embedding_inputs_num{1};
     bmrt_memcpy_s2d_parallel(
@@ -530,8 +530,8 @@ void WizardCoderModel::stream_generate(
     int cnt = 1;
 
     auto const input_token_len = input_ids.size();
-    auto start_time = std::chrono::high_resolution_clock::now();
-    auto token = inner.forward_first(input_ids);
+    auto       start_time = std::chrono::high_resolution_clock::now();
+    auto       token = inner.forward_first(input_ids);
 
     auto FTL = get_elasped(start_time);
 

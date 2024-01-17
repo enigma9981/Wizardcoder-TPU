@@ -10,9 +10,9 @@
 #include "tokenizer.h"
 
 /*
-The legacy WizardCoder runtime on BM1684X, including WizardCoder-15B-V1.0. The
-new version of WizardCoder is based on CodeLLama and is not compatible with this
-runtime.
+The legacy WizardCoder runtime on BM1684X, including WizardCoder-15B-V1.0 and
+WizardCoder-1B-V1.0. The new version of WizardCoder is based on CodeLLAMA and
+may not be compatible with this runtime.
 */
 
 struct WizardCoderImpl {
