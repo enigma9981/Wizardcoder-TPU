@@ -264,11 +264,12 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
                 &ctx.lm_head.token,
                 bmrt,
                 lm_head->output_dtypes[0],
-                lm_head->stages[0].output_shapes[1]);
+                lm_head->stages[0].output_shapes[0]);
     }();
 
     ctx.model_config = cfg.value();
 
+    std::cout << FBLU("Loaded\n");
     return ctx;
 }
 
