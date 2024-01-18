@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include "bmdef.h"
+#include "config.h"
 #include "tokenizer.h"
 
 /*
@@ -23,11 +24,13 @@ struct WizardCoderImpl {
     WizardCoderImpl(WizardCoderImpl&&) noexcept = default;
     WizardCoderImpl& operator=(WizardCoderImpl&&) noexcept = default;
 
+    AutoConfig               model_config;
     std::vector<bm_handle_t> handles;
     std::vector<int>         dev_ids;
     int                      num_device;
     bm_handle_t              handle;
     void*                    bmrt;
+
 
     struct WizardCoderEmbedding {
         bm_tensor_t input_ids_512, input_pos_512;

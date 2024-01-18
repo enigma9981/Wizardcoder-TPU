@@ -19,13 +19,11 @@
 #include "bmdef.h"
 #include "bmlib_runtime.h"
 #include "bmruntime_interface.h"
+#include "include/config.h"
 #include "include/tokenizer.h"
 #include "include/utils.h"
 
-static constexpr int num_layers = 40;
 static constexpr int MAX_LEN = 512;
-static constexpr int hidden_size = 6144;
-static constexpr int num_heads = 48;
 
 void compare_vectors(
         const float* a,
@@ -90,13 +88,16 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
         std::string_view        model_path,
         const std::vector<int>& devids) {
     WizardCoderImpl ctx;
-    // num_layers = 40;
-    // return ctx;
+
+    auto const cfg = AutoConfig::from_pretrained(model_path);
+    if (cfg == std::nullopt)
+        return std::cerr << "No config found\n", std::nullopt;
+
 
     int num_device = devids.size();
     ctx.num_device = num_device;
-    ctx.blocks.resize(num_layers);
-    ctx.blocks_cache.resize(num_layers);
+    ctx.blocks.resize(cfg->num_layers);
+    ctx.blocks_cache.resize(cfg->num_layers);
 
     for (auto&& block : ctx.blocks) {
         block.attention_mask.resize(num_device);
@@ -169,7 +170,7 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
     }();
 
     [&]() {
-        for (int i = 0; i < num_layers; i++) {
+        for (int i = 0; i < cfg->num_layers; i++) {
             auto  name = std::string{"block_"} + std::to_string(i);
             auto  block_net = bmrt_get_network_info(bmrt, name.c_str());
             int   in_num = block_net->input_num / num_device;
@@ -206,7 +207,7 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
     }();
 
     [&]() {
-        for (int i = 0; i < num_layers; i++) {
+        for (int i = 0; i < cfg->num_layers; i++) {
             auto name = std::string{"block_cache_"} + std::to_string(i);
             auto block_net = bmrt_get_network_info(bmrt, name.c_str());
             // auto devs = block->input_loc_devices;
@@ -265,6 +266,8 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
                 lm_head->output_dtypes[0],
                 lm_head->stages[0].output_shapes[1]);
     }();
+
+    ctx.model_config = cfg.value();
 
     return ctx;
 }
@@ -333,7 +336,7 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
         outputs_block.push_back(blocks[0].past_layers[i]);
     }
 
-    for (int i = 0; i < num_layers; i++) {
+    for (int i = 0; i < model_config.num_layers; i++) {
         auto name = std::string{"block_"} + std::to_string(i);
         for (int j = 0; j < num_device; j++) {
             outputs_block[1] = blocks[i].past_layers[j];
@@ -387,7 +390,7 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
 void WizardCoderImpl::move2end(const bm_tensor_t& cache) {
     auto sz = bm_mem_get_device_size(cache.device_mem);
     auto bytes = sz / MAX_LEN;
-    auto x = hidden_size / num_heads * 2;
+    auto x = model_config.hidden_size / model_config.num_heads * 2;
     auto len = token_length * bytes;
     bm_memcpy_d2d(handle, cache.device_mem, sz - len, cache.device_mem, 0, len);
 }
@@ -447,7 +450,7 @@ int WizardCoderImpl::forward_next() {
         outputs_block.push_back(blocks_cache[0].current_cache[i]);
     }
 
-    for (int i = 0; i < num_layers; i++) {
+    for (int i = 0; i < model_config.num_layers; i++) {
         auto name = std::string{"block_cache_"} + std::to_string(i);
 
         for (int j = 0; j < num_device; j++) {

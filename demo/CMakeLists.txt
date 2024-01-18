@@ -38,22 +38,14 @@ FetchContent_Declare(
 )
 
 
-
-FetchContent_Declare(
-  json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.11.3
-)
+FetchContent_MakeAvailable(ctre cxxopts simdjson cnpy)
 
 
-FetchContent_MakeAvailable(ctre cxxopts simdjson cnpy json)
-
-
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-    message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
+# get_cmake_property(_variableNames VARIABLES)
+# list (SORT _variableNames)
+# foreach (_variableName ${_variableNames})
+#     message(STATUS "${_variableName}=${${_variableName}}")
+# endforeach()
 
 
 
@@ -61,7 +53,8 @@ endforeach()
 
 
 include_directories(${LIBSOPHON_DIR}/include)
-file(GLOB OPT_SRC gpt2tokenizer.cc wizardcoder.cc opt.cc)
+file(GLOB OPT_SRC *.cc)
+message(STATUS ${OPT_SRC})
 add_library(tpuopt ${OPT_SRC})
 target_include_directories(tpuopt PRIVATE ${CNPY_SOURCE_DIR})
 target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
