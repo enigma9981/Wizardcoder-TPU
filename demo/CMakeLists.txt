@@ -8,6 +8,7 @@ if(NOT DEFINED LIBSOPHON_DIR)
 endif()
 message(STATUS "LIBSOPHON_DIR is set to: ${LIBSOPHON_DIR}")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall")
 
 include(FetchContent)
 
@@ -59,11 +60,10 @@ add_library(tpuopt ${OPT_SRC})
 target_include_directories(tpuopt PRIVATE ${CNPY_SOURCE_DIR})
 target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
 
-# target_include_directories(tpuopt PRIVATE ${ONNXRUNTIME_DIR}/include)
-# target_link_directories(tpuopt PRIVATE ${ONNXRUNTIME_DIR}/lib)
-
-target_link_libraries(tpuopt PRIVATE simdjson::simdjson ctre bmlib bmrt cnpy)
 
 
+target_link_libraries(tpuopt PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy)
 
 add_subdirectory(bin)
+add_subdirectory(c)
+add_subdirectory(python)

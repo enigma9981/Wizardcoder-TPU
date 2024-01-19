@@ -93,7 +93,6 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
     if (cfg == std::nullopt)
         return std::cerr << "No config found\n", std::nullopt;
 
-
     int num_device = devids.size();
     ctx.num_device = num_device;
     ctx.blocks.resize(cfg->num_layers);
@@ -504,6 +503,15 @@ int WizardCoderImpl::forward_next() {
 
 std::vector<int> WizardCoderModel::encode(std::string_view input_str) {
     return tokenizer.encode(input_str);
+}
+
+void WizardCoderModel::init(
+        std::string_view        model_path,
+        const std::vector<int>& dev_ids) {
+    auto ctx = WizardCoderImpl::from_pretrained(model_path, dev_ids);
+    if (!ctx) std::cerr << FRED("Ctx Error\n");
+    inner = std::move(ctx.value());
+    tokenizer = std::move(GPT2Tokenizer::from_pretrained(model_path).value());
 }
 
 std::optional<WizardCoderModel> WizardCoderModel::from_pretrained(

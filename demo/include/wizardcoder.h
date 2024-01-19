@@ -6,7 +6,6 @@
 #include <string_view>
 #include <unordered_map>
 #include <vector>
-#include "bmdef.h"
 #include "config.h"
 #include "tokenizer.h"
 
@@ -30,7 +29,6 @@ struct WizardCoderImpl {
     int                      num_device;
     bm_handle_t              handle;
     void*                    bmrt;
-
 
     struct WizardCoderEmbedding {
         bm_tensor_t input_ids_512, input_pos_512;
@@ -86,6 +84,8 @@ struct WizardCoderModel {
     std::vector<int> encode(std::string_view);
     void stream_generate(const std::vector<int>& input_ids, int max_new_length);
     std::string build_prompt(std::string_view) const;
+
+    void init(std::string_view, const std::vector<int>&);
 };
 
 inline long long get_elasped(
