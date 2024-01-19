@@ -23,3 +23,5 @@ compare_data
 baks
 
 third_party
+
+evals/*

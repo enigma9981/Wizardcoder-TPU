@@ -563,3 +563,35 @@ void WizardCoderModel::stream_generate(
               << FYEL(" ms\nRate: ") << (cnt - 1) * 1000.0 / total
               << FYEL(" Token/Sec\n");
 }
+
+std::string WizardCoderModel::generate(
+        const std::vector<int>& input_ids,
+        int                     max_new_length) {
+    int cnt = 1;
+
+    auto const input_token_len = input_ids.size();
+    auto       start_time = std::chrono::high_resolution_clock::now();
+    auto       token = inner.forward_first(input_ids);
+
+    std::string res;
+
+    auto FTL = get_elasped(start_time);
+
+    start_time = std::chrono::high_resolution_clock::now();
+
+    while (++cnt < max_new_length && cnt + input_token_len <= MAX_LEN) {
+        auto result = tokenizer.decode_id(token, true);
+        if (result == "<|endoftext|>") break;
+        // std::cout << result << std::flush;
+        res += result;
+        token = inner.forward_next();
+    }
+
+    auto total = get_elasped(start_time);
+
+    std::cout << FYEL("\n\nInference Time: ") << (total + FTL)
+              << FYEL(" ms\nToken: ") << cnt << FYEL(" FTL: ") << FTL
+              << FYEL(" ms\nRate: ") << (cnt - 1) * 1000.0 / total
+              << FYEL(" Token/Sec\n");
+    return res;
+}

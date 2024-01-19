@@ -82,7 +82,10 @@ struct WizardCoderModel {
             const std::vector<int>&);
 
     std::vector<int> encode(std::string_view);
+
     void stream_generate(const std::vector<int>& input_ids, int max_new_length);
+    std::string generate(const std::vector<int>& input_ids, int max_new_length);
+
     std::string build_prompt(std::string_view) const;
 
     void init(std::string_view, const std::vector<int>&);
