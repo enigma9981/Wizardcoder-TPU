@@ -87,6 +87,7 @@ struct WizardCoderModel {
     std::string generate(const std::vector<int>& input_ids, int max_new_length);
 
     std::string build_prompt(std::string_view) const;
+    std::string build_evaluation_prompt(std::string_view) const;
 
     void init(std::string_view, const std::vector<int>&);
 };

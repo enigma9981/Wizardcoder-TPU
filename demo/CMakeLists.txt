@@ -42,16 +42,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(ctre cxxopts simdjson cnpy)
 
 
-# get_cmake_property(_variableNames VARIABLES)
-# list (SORT _variableNames)
-# foreach (_variableName ${_variableNames})
-#     message(STATUS "${_variableName}=${${_variableName}}")
-# endforeach()
-
-
-
-# SET(ONNXRUNTIME_DIR ${CMAKE_SOURCE_DIR}/third_party/onnxruntime)
-
 
 include_directories(${LIBSOPHON_DIR}/include)
 file(GLOB OPT_SRC *.cc)

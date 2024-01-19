@@ -41,7 +41,7 @@ extern "C" const char* bmwizardcoder_complete(
         const char*    input,
         int            max_new_length) {
     tmp = std::string(input);
-    auto prompt = instance->inner->build_prompt(tmp);
+    auto prompt = instance->inner->build_evaluation_prompt(tmp);
     auto ids = instance->inner->encode(prompt);
     res = instance->inner->generate(ids, max_new_length);
     return res.c_str();

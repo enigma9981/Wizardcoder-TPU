@@ -390,7 +390,7 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
 void WizardCoderImpl::move2end(const bm_tensor_t& cache) {
     auto sz = bm_mem_get_device_size(cache.device_mem);
     auto bytes = sz / MAX_LEN;
-    auto x = model_config.hidden_size / model_config.num_heads * 2;
+    // auto x = model_config.hidden_size / model_config.num_heads * 2;
     auto len = token_length * bytes;
     bm_memcpy_d2d(handle, cache.device_mem, sz - len, cache.device_mem, 0, len);
 }
@@ -534,6 +534,16 @@ std::string WizardCoderModel::build_prompt(std::string_view input_str) const {
     return "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
            "### Instruction:\n" +
             std::string{input_str} + "\n\n### Response:";
+}
+
+std::string WizardCoderModel::build_evaluation_prompt(
+        std::string_view input_str) const {
+    return "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
+           "### Instruction:\n"
+           "Create a Python program for this problem:\n" +
+            std::string{input_str} +
+            "\n"
+            "### Response:";
 }
 
 void WizardCoderModel::stream_generate(
