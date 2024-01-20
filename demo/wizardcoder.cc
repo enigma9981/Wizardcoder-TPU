@@ -25,6 +25,26 @@
 
 static constexpr int MAX_LEN = 512;
 
+template <typename T>
+void dump_tensor_to_file(
+        bm_handle_t&          handle,
+        bm_tensor_t&          t,
+        std::vector<size_t>&& shape,
+        const std::string&    filename,
+        const std::string&    tensor_name) {
+    int  cnt = bm_mem_get_device_size(t.device_mem) / sizeof(T);
+    auto buffer = std::make_unique<T[]>(cnt);
+    bm_memcpy_d2s(handle, buffer.get(), t.device_mem);
+    std::vector<T> data(cnt);
+    if constexpr (std::is_same_v<T, unsigned short>) {
+        for (int i = 0; i < cnt; i++)
+            data[i] = half_to_float(buffer[i]);
+    } else {
+        memcpy(data.data(), buffer.get(), sizeof(float) * cnt);
+    }
+    cnpy::npz_save(filename, tensor_name, data.data(), shape, "a");
+}
+
 void compare_vectors(
         const float* a,
         const float* b,
@@ -324,7 +344,12 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
             false);
 
     bm_thread_sync(handle);
-
+    dump_tensor_to_file<float>(
+            handle,
+            embedding.hidden_states_512,
+            {1, 512, 6144},
+            "dev1.npz",
+            "hidden_states_512");
     std::vector<bm_tensor_t> inputs_block;
     std::vector<bm_tensor_t> outputs_block;
 
@@ -357,6 +382,13 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
         }
 
         bm_thread_sync(handle);
+
+        dump_tensor_to_file<float>(
+                handle,
+                embedding.hidden_states_512,
+                {1, 512, 6144},
+                "dev1.npz",
+                name);
     }
 
     auto bytes =
@@ -383,6 +415,11 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
     int token = 0;
     bm_memcpy_d2s(handle, &token, lm_head.token.device_mem);
 
+    dump_tensor_to_file<float>(
+            handle, lm_head.hidden_states, {6144}, "dev1.npz", "lh_head_input");
+    
+     dump_tensor_to_file<int>(
+            handle, lm_head.token, {1}, "dev1.npz", "token");
     ++token_length;
     return token;
 }
@@ -563,7 +600,7 @@ void WizardCoderModel::stream_generate(
         auto result = tokenizer.decode_id(token, true);
         if (result == "<|endoftext|>") break;
         std::cout << result << std::flush;
-        token = inner.forward_next();
+        // token = inner.forward_next();
     }
 
     auto total = get_elasped(start_time);
@@ -594,7 +631,7 @@ std::string WizardCoderModel::generate(
         if (result == "<|endoftext|>") break;
         // std::cout << result << std::flush;
         res += result;
-        token = inner.forward_next();
+        // token = inner.forward_next();
     }
 
     auto total = get_elasped(start_time);

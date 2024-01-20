@@ -23,10 +23,10 @@ int main(int argc, char** argv) {
     std::string input_str;
 
     auto inputs = std::vector<const char*>{
-            "Write a Python code to count 1 to 10.",
-            "Write a Jave code to sum 1 to 10.",
+            // "Write a Python code to count 1 to 10.",
+            // "Write a Jave code to sum 1 to 10.",
             "Write a Rust code to find SCC.",
-            "Write a Go code to find LCA",
+            // "Write a Go code to find LCA",
     };
 
     int cnt = 0;
