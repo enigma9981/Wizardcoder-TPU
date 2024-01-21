@@ -600,7 +600,7 @@ void WizardCoderModel::stream_generate(
         auto result = tokenizer.decode_id(token, true);
         if (result == "<|endoftext|>") break;
         std::cout << result << std::flush;
-        // token = inner.forward_next();
+        token = inner.forward_next();
     }
 
     auto total = get_elasped(start_time);
