@@ -417,9 +417,8 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
 
     dump_tensor_to_file<float>(
             handle, lm_head.hidden_states, {6144}, "dev1.npz", "lh_head_input");
-    
-     dump_tensor_to_file<int>(
-            handle, lm_head.token, {1}, "dev1.npz", "token");
+
+    dump_tensor_to_file<int>(handle, lm_head.token, {1}, "dev1.npz", "token");
     ++token_length;
     return token;
 }
@@ -461,6 +460,13 @@ int WizardCoderImpl::forward_next() {
             false);
 
     bm_thread_sync(handle);
+
+    dump_tensor_to_file<float>(
+            handle,
+            embedding.hidden_states_1,
+            {1, 1, 6144},
+            "dev1.npz",
+            "hidden_states_1");
 
     auto attention_mask = std::make_unique<float[]>(1 + MAX_LEN);
     for (int i = 0; i < MAX_LEN - token_length + 1; i++)
@@ -507,6 +513,12 @@ int WizardCoderImpl::forward_next() {
 
         bm_thread_sync(handle);
 
+        dump_tensor_to_file<float>(
+                handle,
+                embedding.hidden_states_1,
+                {1, 1, 6144},
+                "dev1.npz",
+                name);
         auto totalsize = bm_mem_get_device_size(
                                  blocks_cache[0].current_cache[0].device_mem) /
                 513;
@@ -531,6 +543,12 @@ int WizardCoderImpl::forward_next() {
             true,
             false);
     bm_thread_sync(handle);
+
+    dump_tensor_to_file<float>(
+            handle, embedding.hidden_states_1, {6144}, "dev1.npz", "lm_head_1");
+    dump_tensor_to_file<int>(
+            handle, lm_head.token, {1}, "dev1.npz", "token_1");
+
     int token = 0;
     ++token_length;
     bm_memcpy_d2s(handle, &token, lm_head.token.device_mem);
@@ -631,7 +649,7 @@ std::string WizardCoderModel::generate(
         if (result == "<|endoftext|>") break;
         // std::cout << result << std::flush;
         res += result;
-        // token = inner.forward_next();
+        token = inner.forward_next();
     }
 
     auto total = get_elasped(start_time);
