@@ -6,14 +6,12 @@
 #include <ostream>
 #include <string>
 #include <vector>
-#include "opt.h"
 #include "tokenizer.h"
 
 int main(int argc, char** argv) {
     std::vector<int> ids{0};
     auto             model = WizardCoderModel::from_pretrained(argv[1], ids);
-    // auto model = new WizardCoderModel;
-    // model->init(argv[1], ids);
+
 
     if (!model) std::cerr << "Error\n";
 

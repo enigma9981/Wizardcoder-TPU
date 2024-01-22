@@ -130,8 +130,8 @@ std::optional<GPT2Tokenizer> GPT2Tokenizer::from_pretrained(
     result.m_encoder = std::move(encoder);
     result.m_decoder = std::move(decoder);
 
-    result.m_byte_encoder = std::move(bytes_to_unicode());
-    result.m_byte_decoder = std::move(unicode_to_bytes());
+    result.m_byte_encoder = bytes_to_unicode();
+    result.m_byte_decoder = unicode_to_bytes();
 
     result.add_special_token("</s>");
     result.add_special_token("<pad>");
@@ -146,7 +146,7 @@ std::vector<std::string> GPT2Tokenizer::tokenize(std::string_view text) {
         std::string byte_token;
         for (auto&& e : token)
             byte_token += m_byte_encoder[e];
-        auto result = std::move(bpe(byte_token));
+        auto result = bpe(byte_token);
         bpe_tokens.insert(bpe_tokens.end(), result.begin(), result.end());
     }
 
@@ -163,16 +163,6 @@ inline int get_charsize(char c) {
     return 1;
 }
 
-static std::vector<std::string> splitutf8(const std::string& input) {
-    std::vector<std::string> res;
-    int                      len = input.size();
-    for (int i = 0; i < len;) {
-        int sz = get_charsize(input[i]);
-        res.push_back(input.substr(i, sz));
-        i += sz;
-    }
-    return res;
-}
 
 std::string GPT2Tokenizer::decode(
         const std::vector<int>& token_ids,

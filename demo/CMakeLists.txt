@@ -1,8 +1,3 @@
-if (NOT DEFINED TARGET_ARCH)
-    set(TARGET_ARCH local)
-endif()
-
-
 if(NOT DEFINED LIBSOPHON_DIR)
     set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/demo/libsophon_pcie CACHE STRING "The directory of libsophon")
 endif()
@@ -55,5 +50,9 @@ target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
 target_link_libraries(tpuopt PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy)
 
 add_subdirectory(bin)
-add_subdirectory(c)
-add_subdirectory(python)
+
+
+if(BUILD_PYTHON)
+  add_subdirectory(c)
+  add_subdirectory(python)
+endif()

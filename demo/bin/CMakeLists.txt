@@ -12,8 +12,8 @@ target_link_libraries(wizardcodercc PRIVATE tpuopt cxxopts)
 
 
 
-file(GLOB OPTCC_SRC opt.cc)
-add_executable(optcc ${OPTCC_SRC})
+# file(GLOB OPTCC_SRC opt.cc)
+# add_executable(optcc ${OPTCC_SRC})
 
-target_link_directories(optcc PRIVATE ${LIBSOPHON_DIR}/lib)
-target_link_libraries(optcc PRIVATE tpuopt cxxopts)
+# target_link_directories(optcc PRIVATE ${LIBSOPHON_DIR}/lib)
+# target_link_libraries(optcc PRIVATE tpuopt cxxopts)
