@@ -32,6 +32,7 @@ void dump_tensor_to_file(
         std::vector<size_t>&& shape,
         const std::string&    filename,
         const std::string&    tensor_name) {
+#ifdef DEBUG
     int  cnt = bm_mem_get_device_size(t.device_mem) / sizeof(T);
     auto buffer = std::make_unique<T[]>(cnt);
     bm_memcpy_d2s(handle, buffer.get(), t.device_mem);
@@ -43,6 +44,8 @@ void dump_tensor_to_file(
         memcpy(data.data(), buffer.get(), sizeof(float) * cnt);
     }
     cnpy::npz_save(filename, tensor_name, data.data(), shape, "a");
+
+#endif
 }
 
 void compare_vectors(
@@ -546,8 +549,7 @@ int WizardCoderImpl::forward_next() {
 
     dump_tensor_to_file<float>(
             handle, embedding.hidden_states_1, {6144}, "dev1.npz", "lm_head_1");
-    dump_tensor_to_file<int>(
-            handle, lm_head.token, {1}, "dev1.npz", "token_1");
+    dump_tensor_to_file<int>(handle, lm_head.token, {1}, "dev1.npz", "token_1");
 
     int token = 0;
     ++token_length;

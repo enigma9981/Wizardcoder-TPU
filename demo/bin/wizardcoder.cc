@@ -24,9 +24,9 @@ int main(int argc, char** argv) {
 
     auto inputs = std::vector<const char*>{
             "Write a Python code to count 1 to 10.",
-            // "Write a Jave code to sum 1 to 10.",
-            // "Write a Rust code to find SCC.",
-            // "Write a Go code to find LCA",
+            "Write a Jave code to sum 1 to 10.",
+            "Write a Rust code to find SCC.",
+            "Write a Go code to find LCA",
     };
 
     int cnt = 0;
@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
         std::cout << FRED("WizardCoder-15B-V1.0-BM1684X: ") << std::flush;
         auto prompt = model->build_prompt(input_str);
         auto input_ids = model->encode(prompt);
-        model->stream_generate(input_ids, 3);
+        model->stream_generate(input_ids, 50);
         std::cout << FBLU("\n\nUser: ") << std::flush;
     }
 
