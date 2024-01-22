@@ -25,6 +25,7 @@
 
 static constexpr int MAX_LEN = 512;
 
+#define DEBUG
 template <typename T>
 void dump_tensor_to_file(
         bm_handle_t&          handle,
