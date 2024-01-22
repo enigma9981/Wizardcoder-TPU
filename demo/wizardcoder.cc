@@ -381,6 +381,13 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
                 true,
                 false);
 
+         bm_thread_sync(handle);
+        dump_tensor_to_file<float>(
+                handle,
+                blocks[i].past_layers[0],
+                {1, 512, 256},
+                "dev1.npz",
+                "past_layer" + std::to_string(i));
         for (int j = 0; j < num_device; j++) {
             move2end(blocks[i].past_layers[j]);
         }
@@ -399,7 +406,7 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
             bm_mem_get_device_size(embedding.hidden_states_512.device_mem) /
             MAX_LEN;
 
-    bm_memcpy_d2d(
+    bm_memcpy_d2d_byte(
             handle,
             lm_head.hidden_states.device_mem,
             0,
