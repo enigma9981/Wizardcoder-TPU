@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
         std::cout << FRED("WizardCoder-15B-V1.0-BM1684X: ") << std::flush;
         auto prompt = model->build_prompt(input_str);
         auto input_ids = model->encode(prompt);
-        model->stream_generate(input_ids, 2);
+        model->stream_generate(input_ids, 10);
         std::cout << FBLU("\n\nUser: ") << std::flush;
     }
 

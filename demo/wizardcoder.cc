@@ -470,7 +470,7 @@ int WizardCoderImpl::forward_next() {
             embedding.hidden_states_1,
             {1, 1, 6144},
             "dev1.npz",
-            "hidden_states_1");
+            "hidden_states_1" + std::to_string(token_length));
 
     auto attention_mask = std::make_unique<float[]>(1 + MAX_LEN);
     for (int i = 0; i < MAX_LEN - token_length + 1; i++)
@@ -522,7 +522,7 @@ int WizardCoderImpl::forward_next() {
                 embedding.hidden_states_1,
                 {1, 1, 6144},
                 "dev1.npz",
-                name);
+                name + std::to_string(token_length));
         auto totalsize = bm_mem_get_device_size(
                                  blocks_cache[0].current_cache[0].device_mem) /
                 513;
@@ -549,8 +549,17 @@ int WizardCoderImpl::forward_next() {
     bm_thread_sync(handle);
 
     dump_tensor_to_file<float>(
-            handle, embedding.hidden_states_1, {6144}, "dev1.npz", "lm_head_1");
-    dump_tensor_to_file<int>(handle, lm_head.token, {1}, "dev1.npz", "token_1");
+            handle,
+            embedding.hidden_states_1,
+            {6144},
+            "dev1.npz",
+            "lm_head_1" + std::to_string(token_length));
+    dump_tensor_to_file<int>(
+            handle,
+            lm_head.token,
+            {1},
+            "dev1.npz",
+            "token_1" + std::to_string(token_length));
 
     int token = 0;
     ++token_length;
