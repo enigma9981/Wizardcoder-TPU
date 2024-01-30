@@ -25,7 +25,7 @@
 
 static constexpr int MAX_LEN = 512;
 
-#define DEBUG
+// #define DEBUG
 template <typename T>
 void dump_tensor_to_file(
         bm_handle_t&          handle,
@@ -49,64 +49,6 @@ void dump_tensor_to_file(
 #endif
 }
 
-void compare_vectors(
-        const float* a,
-        const float* b,
-        int          n,
-        int          max_idx,
-        int          topk = 20) {
-    float v1 = 0, v2 = 0, v3 = 0, d = 0;
-
-    using PFI = std::pair<float, int>;
-    std::vector<PFI> rela;
-
-    for (int i = 0; i < max_idx; i++)
-        v1 += a[i] * a[i], v2 += b[i] * b[i], v3 += a[i] * b[i],
-                d += (a[i] - b[i]) * (a[i] - b[i]),
-                rela.push_back({std::abs((a[i] - b[i]) / b[i]), i});
-
-    std::cout << rela.size() << '\n';
-
-    std::cout << "\n\nSimi:" << std::sqrt(v3 * v3 / v1 / v2) << '\n';
-    std::cout << "\n\nEulide:" << std::sqrt(d) << '\n';
-
-    std::cout << "INT8: ";
-    for (int i = 0; i < topk; i++) {
-        std::cout << a[i] << ' ';
-    }
-    std::cout << "\n\n\n";
-
-    std::cout << "ONNX: ";
-    for (int i = 0; i < topk; i++) {
-        std::cout << b[i] << ' ';
-    }
-    std::cout << '\n';
-
-    std::sort(rela.begin(), rela.end(), [](PFI a, PFI b) {
-        return a.first > b.first;
-    });
-
-    std::cout << '\n';
-}
-
-template <typename T>
-void dump_tensor(bm_handle_t& handle, const bm_tensor_t& t) {
-    std::cout << "Shape: \n";
-    for (int i = 0; i < t.shape.num_dims; i++) {
-        std::cout << t.shape.dims[i] << ", ";
-    }
-    std::cout << '\n';
-    int  cnt = bm_mem_get_device_size(t.device_mem) / sizeof(T);
-    auto buffer = std::make_unique<T[]>(cnt);
-    std::cout << "cnt: " << cnt << '\n';
-    bm_memcpy_d2s(handle, buffer.get(), t.device_mem);
-
-    int cc = 0;
-    for (int i = 0; i < cnt; i++) {
-        if (std::isnan(buffer[i])) ++cc;
-    }
-    std::cout << "CC: " << cc << '\n';
-}
 
 std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
         std::string_view        model_path,
@@ -629,7 +571,7 @@ void WizardCoderModel::stream_generate(
     auto       start_time = std::chrono::high_resolution_clock::now();
     auto       token = inner.forward_first(input_ids);
 
-    auto FTL = get_elasped(start_time);
+    auto FTL = get_elapsed(start_time);
 
     start_time = std::chrono::high_resolution_clock::now();
 
@@ -640,7 +582,7 @@ void WizardCoderModel::stream_generate(
         token = inner.forward_next();
     }
 
-    auto total = get_elasped(start_time);
+    auto total = get_elapsed(start_time);
 
     std::cout << FYEL("\n\nInference Time: ") << (total + FTL)
               << FYEL(" ms\nToken: ") << cnt << FYEL(" FTL: ") << FTL
@@ -659,19 +601,18 @@ std::string WizardCoderModel::generate(
 
     std::string res;
 
-    auto FTL = get_elasped(start_time);
+    auto FTL = get_elapsed(start_time);
 
     start_time = std::chrono::high_resolution_clock::now();
 
     while (++cnt < max_new_length && cnt + input_token_len <= MAX_LEN) {
         auto result = tokenizer.decode_id(token, true);
         if (result == "<|endoftext|>") break;
-        // std::cout << result << std::flush;
         res += result;
         token = inner.forward_next();
     }
 
-    auto total = get_elasped(start_time);
+    auto total = get_elapsed(start_time);
 
     std::cout << FYEL("\n\nInference Time: ") << (total + FTL)
               << FYEL(" ms\nToken: ") << cnt << FYEL(" FTL: ") << FTL

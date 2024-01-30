@@ -3,9 +3,10 @@ set -ex
 models=
 mode="f16"
 num_device=1
-quantize_args="--quantize F16"
+quantize_args="--quantize W4F16 --q_group_size 64"
+#quantize_args="--quantize F16"
 device_args=""
-out_model=opt-7b.bmodel
+out_model=wizardcoder-15B-int4_rc1.bmodel
 
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -34,14 +35,14 @@ if [ x$mode == x"int8" ] || [ x$mode == x"int4" ]; then
     if [ x$mode == x"int8" ]; then
         quantize_args="--quantize W8F16"
     else
-        quantize_args="--quantize W4F16"
+        quantize_args="--quantize W4F16 --q_group_size 64"
     fi
-    out_model="opt-7b_$mode.bmodel"
+    out_model="wizardcoder-15B_$mode.bmodel"
 fi
 
 if [ x$num_device != x1 ]; then
     device_args="--num_device $num_device"
-    out_model='opt-7b_'$mode'_'$num_device'dev.bmodel'
+    out_model='wizardcoder-15B_'$mode'_'$num_device'dev.bmodel'
 fi
 
 outdir=tmp/embedding
@@ -52,8 +53,8 @@ seqlen=512
 
 model_transform.py \
     --model_name embedding \
-    --model_def ../embeddings512.onnx \
-    --input_shapes [[$seqlen],[$seqlen]] \
+    --model_def ../../embeddings.onnx \
+    --input_shapes [[1,$seqlen],[1,$seqlen]] \
     --mlir embedding_${seqlen}.mlir
 
 
@@ -65,8 +66,8 @@ model_deploy.py \
 
 model_transform.py \
     --model_name embedding \
-    --model_def ../embeddings512.onnx \
-    --input_shapes [[1],[1]] \
+    --model_def ../../embeddings.onnx \
+    --input_shapes [[1,1],[1,1]] \
     --mlir embedding_1.mlir
 
 
@@ -88,12 +89,12 @@ pushd $outdir
 
 model_transform.py \
     --model_name lm_head \
-    --model_def ../../lm_head.onnx \
+    --model_def ../../../lm_head.onnx \
     --mlir lm_head.mlir
 
 model_deploy.py \
     --mlir lm_head.mlir \
-    --quantize F32 \
+    --quantize W8F16 \
     --chip bm1684x \
     $device_args \
     --model lm_head.bmodel
@@ -109,12 +110,12 @@ mkdir -p $outdir
 pushd $outdir
 mkdir -p $outdir
 
-for i in {0..31}
+for i in {0..39}
 do
 
 model_transform.py \
     --model_name block_$i \
-    --model_def ../../block_$i.onnx \
+    --model_def ../../../block_$i.onnx \
     --mlir block_$i.mlir
 
 model_deploy.py \
@@ -126,7 +127,7 @@ model_deploy.py \
 
 model_transform.py \
     --model_name block_cache_$i \
-    --model_def ../../block_cache_$i.onnx \
+    --model_def ../../../block_cache_$i.onnx \
     --mlir block_cache_$i.mlir
 
 model_deploy.py \
@@ -142,6 +143,5 @@ done
 popd
 echo $models
 
-models=${models}'splitkv.bmodel'
 
 model_tool --combine $models -o $out_model

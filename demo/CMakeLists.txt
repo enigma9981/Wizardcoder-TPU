@@ -55,5 +55,3 @@ target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
 target_link_libraries(tpuopt PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy)
 
 add_subdirectory(bin)
-add_subdirectory(c)
-add_subdirectory(python)

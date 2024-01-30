@@ -92,7 +92,7 @@ struct WizardCoderModel {
     void init(std::string_view, const std::vector<int>&);
 };
 
-inline long long get_elasped(
+inline long long get_elapsed(
         std::chrono::time_point<
                 std::chrono::system_clock,
                 std::chrono::duration<long, std::ratio<1, 1000000000>>>& last) {
