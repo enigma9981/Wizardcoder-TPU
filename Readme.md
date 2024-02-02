@@ -41,11 +41,10 @@ make
 - 使用```pip show transformers```找到```transformers```的位置
 - 使用提供的```modeling_gpt_bigcode.py```替换```python3.11/site-packages/transformers/models/gpt_bigcode/```下的同名文件
 
-
 ### 模型转换
 
 ```shell
-python export_to_onnx.py
+python export_to_onnx.py --model_path ../../WizardCoder-15B-V1.0/
 ./compile.sh --mode int4
 ```
 稍等片刻即可导出int4量化后的bmodel文件
