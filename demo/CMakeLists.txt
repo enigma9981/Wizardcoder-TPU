@@ -1,10 +1,14 @@
-if (NOT DEFINED TARGET_ARCH)
-    set(TARGET_ARCH local)
-endif()
+cmake_minimum_required(VERSION 3.10 FATAL_ERROR)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_BUILD_TYPE "Release")
+project(wizardocder-tpu)
 
 
 if(NOT DEFINED LIBSOPHON_DIR)
-    set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/demo/libsophon_pcie CACHE STRING "The directory of libsophon")
+    set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/libsophon_pcie CACHE STRING "The directory of libsophon")
 endif()
 message(STATUS "LIBSOPHON_DIR is set to: ${LIBSOPHON_DIR}")
 

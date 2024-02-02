@@ -12,30 +12,6 @@ static const int   MAX_LEN = 512;
 static const float ATTENTION_MASK = -10000.;
 static const int   num_heads = 48;
 
-// #define DEBUG
-template <typename T>
-void dump_tensor_to_file(
-        bm_handle_t&          handle,
-        bm_tensor_t&          t,
-        std::vector<size_t>&& shape,
-        const std::string&    filename,
-        const std::string&    tensor_name) {
-#ifdef DEBUG
-    int  cnt = bm_mem_get_device_size(t.device_mem) / sizeof(T);
-    auto buffer = std::make_unique<T[]>(cnt);
-    bm_memcpy_d2s(handle, buffer.get(), t.device_mem);
-    std::vector<T> data(cnt);
-    if constexpr (std::is_same_v<T, unsigned short>) {
-        for (int i = 0; i < cnt; i++)
-            data[i] = half_to_float(buffer[i]);
-    } else {
-        memcpy(data.data(), buffer.get(), sizeof(float) * cnt);
-    }
-    cnpy::npz_save(filename, tensor_name, data.data(), shape, "a");
-
-#endif
-}
-
 #define FYEL
 
 inline long long get_elapsed(
@@ -354,12 +330,7 @@ int WizardCoder::forward_first(const std::vector<int>& token_ids) {
             false);
 
     bm_thread_sync(handle);
-    dump_tensor_to_file<float>(
-            handle,
-            embedding.hidden_states_512,
-            {1, 512, 6144},
-            "dev1.npz",
-            "hidden_states_512");
+
     std::vector<bm_tensor_t> inputs_block;
     std::vector<bm_tensor_t> outputs_block;
 
@@ -388,24 +359,12 @@ int WizardCoder::forward_first(const std::vector<int>& token_ids) {
                 false);
 
         bm_thread_sync(handle);
-        dump_tensor_to_file<float>(
-                handle,
-                blocks[i].past_layers[0],
-                {1, 512, 256},
-                "dev1.npz",
-                "past_layer" + std::to_string(i));
+
         for (int j = 0; j < num_device; j++) {
             move2end(blocks[i].past_layers[j]);
         }
 
         bm_thread_sync(handle);
-
-        dump_tensor_to_file<float>(
-                handle,
-                embedding.hidden_states_512,
-                {1, 512, 6144},
-                "dev1.npz",
-                name);
     }
 
     auto bytes =
@@ -432,10 +391,6 @@ int WizardCoder::forward_first(const std::vector<int>& token_ids) {
     int token = 0;
     bm_memcpy_d2s(handle, &token, lm_head.token.device_mem);
 
-    dump_tensor_to_file<float>(
-            handle, lm_head.hidden_states, {6144}, "dev1.npz", "lh_head_input");
-
-    dump_tensor_to_file<int>(handle, lm_head.token, {1}, "dev1.npz", "token");
     ++token_length;
     return token;
 }
@@ -476,13 +431,6 @@ int WizardCoder::forward_next() {
             false);
 
     bm_thread_sync(handle);
-
-    dump_tensor_to_file<float>(
-            handle,
-            embedding.hidden_states_1,
-            {1, 1, 6144},
-            "dev1.npz",
-            "hidden_states_1" + std::to_string(token_length));
 
     auto attention_mask = std::make_unique<float[]>(1 + MAX_LEN);
     for (int i = 0; i < MAX_LEN - token_length + 1; i++)
@@ -529,12 +477,6 @@ int WizardCoder::forward_next() {
 
         bm_thread_sync(handle);
 
-        dump_tensor_to_file<float>(
-                handle,
-                embedding.hidden_states_1,
-                {1, 1, 6144},
-                "dev1.npz",
-                name + std::to_string(token_length));
         auto totalsize = bm_mem_get_device_size(
                                  blocks_cache[0].current_cache[0].device_mem) /
                 513;
@@ -559,19 +501,6 @@ int WizardCoder::forward_next() {
             true,
             false);
     bm_thread_sync(handle);
-
-    dump_tensor_to_file<float>(
-            handle,
-            embedding.hidden_states_1,
-            {6144},
-            "dev1.npz",
-            "lm_head_1" + std::to_string(token_length));
-    dump_tensor_to_file<int>(
-            handle,
-            lm_head.token,
-            {1},
-            "dev1.npz",
-            "token_1" + std::to_string(token_length));
 
     int token = 0;
     ++token_length;
