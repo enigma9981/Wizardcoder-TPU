@@ -12,20 +12,23 @@
 
 - 支持C++20标准的gcc或clang编译器
 - 如果不使用```demo/libsophon_pcie```的libsophon或者需要特定版本的libsophon，需要在下面编译时指定```LIBSOPHON_DIR```
-- 转换好的Wizardcoder-15B.bmodel文件，直接```GIT_LFS_SKIP_SMUDGE=1 git clone git clone https://huggingface.co/WizardLM/WizardCoder-15B-V1.0 && cp *.bmodel WizardCoder-15B-V1.0```将它们放在一起。demo会使用原仓库下的配置和tokenizer配置
+- 转换好的Wizardcoder-15B.bmodel文件，需要和本仓库中```vocab```目录下的两个文件放在一起。
 
 ### Build
 
 ```shell
-cd build
+mkdir demo/build
+cd demo/build
 cmake .. 
 make
 ```
 ### Inference
 
 #### C++
-完成上文的编译过程后，生成```build/demo/wizardcoder```可执行文件，它可以完成加载bmodel并在```BM1684X```设备上进行推理。
-
+完成上文的编译过程后，生成```demo/build/wizardcoder```可执行文件，它可以完成加载bmodel并在```BM1684X```设备上进行推理。示例：
+```shell
+demo/build/wizardcoder -m /path/to/bmodel -d 0
+```
 
 ## 模型转换
 
