@@ -1,8 +1,5 @@
+#include <bits/stdc++.h>
 #include <simdjson.h>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
 #include "ctre-unicode.hpp"
 #include "include/tokenizer.h"
 
@@ -108,7 +105,7 @@ std::optional<GPT2Tokenizer> GPT2Tokenizer::from_pretrained(
                 {it.line.begin() + split_point + 1, it.line.end()}};
         bpe_ranks.emplace(std::move(p), it.i);
     }
-    
+
     result.m_bpe_ranks = std::move(bpe_ranks);
 
     simdjson::dom::parser  parser;

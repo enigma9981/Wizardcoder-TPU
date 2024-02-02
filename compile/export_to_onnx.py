@@ -1,9 +1,20 @@
+import argparse
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from torch import nn
 torch.set_grad_enabled(False)
 
-model_path = './WizardCoder-15B-V1.0'
+
+parser = argparse.ArgumentParser(description='export Wizardcoder onnx.')
+parser.add_argument('--model_path', type=str,
+                    default="../Wizardcoder-15B-V1.0", help='path to the torch model.')
+parser.add_argument('--max_length', type=int, default=512,
+                    help="max sequence length")
+
+args = parser.parse_args()
+model_path = args.model_path
+MAX_LEN = args.max_length
+onnx_model_path = f'./tmp'
 
 tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 omodel = AutoModelForCausalLM.from_pretrained(
@@ -12,8 +23,6 @@ omodel = AutoModelForCausalLM.from_pretrained(
 
 for param in omodel.parameters():
     param.requires_grad = False
-
-print(omodel)
 
 config = omodel.config
 
@@ -27,9 +36,6 @@ head_dim = hidden_size // num_attention_heads
 
 
 print(f'Layers: {num_layers}\nHidden size: {hidden_size}\n')
-
-
-print(transformer)
 
 
 class Embedding(nn.Module):
@@ -61,7 +67,6 @@ class BlockCache(nn.Module):
     def forward(self, hidden_states, layer_past, attention_mask=None):
         hidden_states, past_layer = self.layer(hidden_states, layer_past,
                                                use_cache=True, attention_mask=attention_mask)
-        # return hidden_states, past_layer[:, 1:, :]
         return hidden_states, past_layer
 
 
@@ -129,8 +134,6 @@ def net_test():
         ng += 1
 
 
-MAX_LEN = 512
-
 compare_data_dir = './tmp/compare_token_4'
 
 
@@ -156,8 +159,6 @@ def net_test_fixed_length(prompt):
                    dtype=torch.float32).triu(diagonal=1)
 
     hidden_states = embeds(init_ids, init_pos).view(1, -1, hidden_size)
-
-    # np.savez("embeddings.npz", hidden_states=hidden_states)
     print(hidden_states.size())
     past_layers = []
     for i in range(num_layers):
@@ -185,7 +186,6 @@ def net_test_fixed_length(prompt):
             hidden_states, current_cache = blocks_cache[i](
                 hidden_states, past_layers[i], attention_mask)
 
-            # past_layers[i] = torch.cat((past_layers[i], current_cache), dim=-2)
             past_layers[i] = current_cache[:, 1:, :]
 
         token = get_token(lm_head, hidden_states)
@@ -194,9 +194,6 @@ def net_test_fixed_length(prompt):
         ng += 1
 
     return tokenizer.decode(result, skip_special_tokens=True)
-
-
-onnx_model_path = f'{model_path}_onnx'
 
 
 def convert_block(layer_id):
@@ -267,14 +264,12 @@ def convert_lm_head():
 
 
 if __name__ == "__main__":
-    input_texts = [
-        'Write a Rust code to find SCC.',
-        'Write a Python code to count 1 to 10.',
-    ]
-
     for i in range(num_layers):
+        print(f'Convert {i}/{num_layers}\'s block...')
         convert_block(i)
+        print(f'Convert {i}/{num_layers}\'s block cache...')
         convert_block_cache(i)
-
+    print(f'Convert embedding')
     convert_embedding()
+    print(f'Convert lm_head')
     convert_lm_head()

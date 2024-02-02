@@ -39,19 +39,11 @@ FetchContent_Declare(
 )
 
 
-FetchContent_MakeAvailable(ctre cxxopts simdjson cnpy)
+FetchContent_MakeAvailable(simdjson cnpy ctre)
 
 
 
-include_directories(${LIBSOPHON_DIR}/include)
-file(GLOB OPT_SRC *.cc)
-message(STATUS ${OPT_SRC})
-add_library(tpuopt ${OPT_SRC})
-target_include_directories(tpuopt PRIVATE ${CNPY_SOURCE_DIR})
-target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
-
-
-
-target_link_libraries(tpuopt PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy)
-
-add_subdirectory(bin)
+add_executable(wizardcoder demo.cpp gpt2tokenizer.cc)
+target_include_directories(wizardcoder PRIVATE ${LIBSOPHON_DIR}/include)
+target_link_directories(wizardcoder PRIVATE ${LIBSOPHON_DIR}/lib)
+target_link_libraries(wizardcoder PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy)

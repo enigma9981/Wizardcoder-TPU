@@ -3,10 +3,9 @@ set -ex
 models=
 mode="f16"
 num_device=1
-quantize_args="--quantize W4F16 --q_group_size 64"
-#quantize_args="--quantize F16"
+quantize_args="--quantize F16"
 device_args=""
-out_model=wizardcoder-15B-int4_rc1.bmodel
+out_model=wizardcoder-15B.bmodel
 
 while [[ $# -gt 0 ]]; do
     key="$1"
@@ -89,7 +88,7 @@ pushd $outdir
 
 model_transform.py \
     --model_name lm_head \
-    --model_def ../../../lm_head.onnx \
+    --model_def ../../lm_head.onnx \
     --mlir lm_head.mlir
 
 model_deploy.py \
@@ -115,7 +114,7 @@ do
 
 model_transform.py \
     --model_name block_$i \
-    --model_def ../../../block_$i.onnx \
+    --model_def ../../block_$i.onnx \
     --mlir block_$i.mlir
 
 model_deploy.py \
@@ -127,7 +126,7 @@ model_deploy.py \
 
 model_transform.py \
     --model_name block_cache_$i \
-    --model_def ../../../block_cache_$i.onnx \
+    --model_def ../../block_cache_$i.onnx \
     --mlir block_cache_$i.mlir
 
 model_deploy.py \

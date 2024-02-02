@@ -1,29 +1,16 @@
-#include "include/wizardcoder.h"
-#include <cnpy.h>
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <utility>
-#include <vector>
-#include "bmdef.h"
-#include "bmlib_runtime.h"
-#include "bmruntime_interface.h"
-#include "include/config.h"
-#include "include/tokenizer.h"
-#include "include/utils.h"
 
-static constexpr int MAX_LEN = 512;
+
+#include <assert.h>
+#include <bits/stdc++.h>
+#include <bmlib_runtime.h>
+#include <bmruntime_interface.h>
+#include <getopt.h>
+#include "include/tokenizer.h"
+
+static const int   NUM_LAYERS = 40;
+static const int   MAX_LEN = 512;
+static const float ATTENTION_MASK = -10000.;
+static const int   num_heads = 48;
 
 // #define DEBUG
 template <typename T>
@@ -49,29 +36,104 @@ void dump_tensor_to_file(
 #endif
 }
 
+#define FYEL
 
-std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
+inline long long get_elapsed(
+        std::chrono::time_point<
+                std::chrono::system_clock,
+                std::chrono::duration<long, std::ratio<1, 1000000000>>>& last) {
+    auto now = std::chrono::high_resolution_clock::now();
+
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now - last)
+            .count();
+}
+
+struct WizardCoder {
+    WizardCoder() {}
+
+    WizardCoder(const WizardCoder&) = delete;
+    WizardCoder& operator=(const WizardCoder&) = delete;
+    WizardCoder(WizardCoder&&) noexcept = default;
+    WizardCoder& operator=(WizardCoder&&) noexcept = default;
+
+    GPT2Tokenizer tokenizer;
+
+    std::vector<bm_handle_t> handles;
+    std::vector<int>         dev_ids;
+    int                      num_device;
+    bm_handle_t              handle;
+    void*                    bmrt;
+
+    struct WizardCoderEmbedding {
+        bm_tensor_t input_ids_512, input_pos_512;
+        bm_tensor_t input_ids_1, input_pos_1;
+        bm_tensor_t hidden_states_512, hidden_states_1;
+    } embedding;
+
+    struct WizardCoderBlock {
+        std::vector<bm_tensor_t> input_states;
+        std::vector<bm_tensor_t> attention_mask;
+        std::vector<bm_tensor_t> hidden_states;
+        std::vector<bm_tensor_t> past_layers;
+    };
+
+    struct WizardCoderBlockCache {
+        std::vector<bm_tensor_t> input_states;
+        std::vector<bm_tensor_t> past_cache;
+        std::vector<bm_tensor_t> attention_mask;
+        std::vector<bm_tensor_t> hidden_states;
+        std::vector<bm_tensor_t> current_cache;
+    };
+
+    std::vector<WizardCoderBlock>      blocks;
+    std::vector<WizardCoderBlockCache> blocks_cache;
+
+    struct WizardCoderLmHead {
+        bm_tensor_t hidden_states;
+        bm_tensor_t token;
+    } lm_head;
+
+    int token_length;
+
+    std::unordered_map<std::string_view, const bm_net_info_t*> networks;
+
+    void move2end(const bm_tensor_t& cache);
+    int  forward_first(const std::vector<int>& token_ids);
+    int  forward_next();
+    void deinit();
+
+    void stream_generate(const std::vector<int>& input_ids, int max_new_length);
+    std::string generate(const std::vector<int>& input_ids, int max_new_length);
+
+    std::string build_prompt(std::string_view) const;
+
+    void init(std::string_view, const std::vector<int>&);
+
+    void answer(std::string_view, int max_new_length = 500);
+
+    void chat();
+};
+
+void WizardCoder::init(
         std::string_view        model_path,
         const std::vector<int>& devids) {
-    WizardCoderImpl ctx;
+    auto tokenizer = GPT2Tokenizer::from_pretrained(model_path);
+    if (!tokenizer) {
+        std::cerr << "No tokenizer\n";
+    }
+    this->tokenizer = std::move(tokenizer.value());
+    num_device = devids.size();
+    blocks.resize(NUM_LAYERS);
+    blocks_cache.resize(NUM_LAYERS);
 
-    auto const cfg = AutoConfig::from_pretrained(model_path);
-    if (cfg == std::nullopt)
-        return std::cerr << "No config found\n", std::nullopt;
-
-    int num_device = devids.size();
-    ctx.num_device = num_device;
-    ctx.blocks.resize(cfg->num_layers);
-    ctx.blocks_cache.resize(cfg->num_layers);
-
-    for (auto&& block : ctx.blocks) {
+    for (auto&& block : blocks) {
         block.attention_mask.resize(num_device);
         block.hidden_states.resize(num_device);
         block.input_states.resize(num_device);
         block.past_layers.resize(num_device);
     }
 
-    for (auto&& block_cache : ctx.blocks_cache) {
+    for (auto&& block_cache : blocks_cache) {
         block_cache.current_cache.resize(num_device);
         block_cache.past_cache.resize(num_device);
         block_cache.attention_mask.resize(num_device);
@@ -81,66 +143,73 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
 
     for (auto id : devids) {
         bm_handle_t handle;
-        if (bm_dev_request(&handle, id) != BM_SUCCESS) return std::nullopt;
-        ctx.handles.push_back(handle);
+        if (bm_dev_request(&handle, id) != BM_SUCCESS) {
+            std::cerr << "Error in bm_dev_request\n";
+            return;
+        }
+        handles.push_back(handle);
     }
 
-    ctx.handle = ctx.handles[0];
-    auto& handle = ctx.handles[0];
+    handle = handles[0];
+    auto& handle = handles[0];
 
-    if (!(ctx.bmrt = bmrt_create_ex(&handle, num_device))) return std::nullopt;
-    auto& bmrt = ctx.bmrt;
-    if (!bmrt_load_bmodel(bmrt, model_path.data())) return std::nullopt;
+    if (!(bmrt = bmrt_create_ex(&handle, num_device))) {
+        std::cerr << "Error in bmrt_create_ex\n";
+        return;
+    }
+    if (!bmrt_load_bmodel(bmrt, model_path.data())) {
+        std::cerr << "Error in bmrt_load_bmodel\n";
+        return;
+    }
 
     const char** network_names{nullptr};
     bmrt_get_network_names(bmrt, &network_names);
     int num = bmrt_get_network_number(bmrt);
     for (int i = 0; i < num; i++) {
-        ctx.networks[network_names[i]] =
+        networks[network_names[i]] =
                 bmrt_get_network_info(bmrt, network_names[i]);
     }
-    auto& networks = ctx.networks;
 
     [&]() {
         bmrt_tensor(
-                &ctx.embedding.input_ids_512,
+                &embedding.input_ids_512,
                 bmrt,
                 networks["embedding"]->input_dtypes[0],
                 networks["embedding"]->stages[1].input_shapes[0]);
         bmrt_tensor(
-                &ctx.embedding.input_pos_512,
+                &embedding.input_pos_512,
                 bmrt,
                 networks["embedding"]->input_dtypes[1],
                 networks["embedding"]->stages[1].input_shapes[1]);
         bmrt_tensor(
-                &ctx.embedding.hidden_states_512,
+                &embedding.hidden_states_512,
                 bmrt,
                 networks["embedding"]->output_dtypes[0],
                 networks["embedding"]->stages[1].output_shapes[0]);
         bmrt_tensor(
-                &ctx.embedding.input_ids_1,
+                &embedding.input_ids_1,
                 bmrt,
                 networks["embedding"]->input_dtypes[0],
                 networks["embedding"]->stages[0].input_shapes[0]);
         bmrt_tensor(
-                &ctx.embedding.input_pos_1,
+                &embedding.input_pos_1,
                 bmrt,
                 networks["embedding"]->input_dtypes[1],
                 networks["embedding"]->stages[0].input_shapes[1]);
         bmrt_tensor(
-                &ctx.embedding.hidden_states_1,
+                &embedding.hidden_states_1,
                 bmrt,
                 networks["embedding"]->output_dtypes[0],
                 networks["embedding"]->stages[0].output_shapes[0]);
     }();
 
     [&]() {
-        for (int i = 0; i < cfg->num_layers; i++) {
+        for (int i = 0; i < NUM_LAYERS; i++) {
             auto  name = std::string{"block_"} + std::to_string(i);
             auto  block_net = bmrt_get_network_info(bmrt, name.c_str());
             int   in_num = block_net->input_num / num_device;
             int   out_num = block_net->output_num / num_device;
-            auto& block = ctx.blocks[i];
+            auto& block = blocks[i];
 
             for (int j = 0; j < num_device; j++) {
                 bmrt_tensor_ex(
@@ -172,13 +241,12 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
     }();
 
     [&]() {
-        for (int i = 0; i < cfg->num_layers; i++) {
-            auto name = std::string{"block_cache_"} + std::to_string(i);
-            auto block_net = bmrt_get_network_info(bmrt, name.c_str());
-            // auto devs = block->input_loc_devices;
+        for (int i = 0; i < NUM_LAYERS; i++) {
+            auto  name = std::string{"block_cache_"} + std::to_string(i);
+            auto  block_net = bmrt_get_network_info(bmrt, name.c_str());
             int   in_num = block_net->input_num / num_device;
             int   out_num = block_net->output_num / num_device;
-            auto& block = ctx.blocks_cache[i];
+            auto& block = blocks_cache[i];
             for (int j = 0; j < num_device; j++) {
                 bmrt_tensor_ex(
                         &block.input_states[j],
@@ -221,24 +289,20 @@ std::optional<WizardCoderImpl> WizardCoderImpl::from_pretrained(
     [&]() {
         auto lm_head = bmrt_get_network_info(bmrt, "lm_head");
         bmrt_tensor(
-                &ctx.lm_head.hidden_states,
+                &this->lm_head.hidden_states,
                 bmrt,
                 lm_head->input_dtypes[0],
                 lm_head->stages[0].input_shapes[0]);
         bmrt_tensor(
-                &ctx.lm_head.token,
+                &this->lm_head.token,
                 bmrt,
                 lm_head->output_dtypes[0],
                 lm_head->stages[0].output_shapes[0]);
     }();
-
-    ctx.model_config = cfg.value();
-
-    std::cout << FBLU("Loaded\n");
-    return ctx;
+    return;
 }
 
-int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
+int WizardCoder::forward_first(const std::vector<int>& token_ids) {
     token_length = token_ids.size();
     auto attention_mask = std::make_unique<float[]>(MAX_LEN * MAX_LEN);
     auto position_id = std::make_unique<int[]>(MAX_LEN);
@@ -307,7 +371,7 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
         outputs_block.push_back(blocks[0].past_layers[i]);
     }
 
-    for (int i = 0; i < model_config.num_layers; i++) {
+    for (int i = 0; i < NUM_LAYERS; i++) {
         auto name = std::string{"block_"} + std::to_string(i);
         for (int j = 0; j < num_device; j++) {
             outputs_block[1] = blocks[i].past_layers[j];
@@ -323,7 +387,7 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
                 true,
                 false);
 
-         bm_thread_sync(handle);
+        bm_thread_sync(handle);
         dump_tensor_to_file<float>(
                 handle,
                 blocks[i].past_layers[0],
@@ -376,15 +440,14 @@ int WizardCoderImpl::forward_first(const std::vector<int>& token_ids) {
     return token;
 }
 
-void WizardCoderImpl::move2end(const bm_tensor_t& cache) {
+void WizardCoder::move2end(const bm_tensor_t& cache) {
     auto sz = bm_mem_get_device_size(cache.device_mem);
     auto bytes = sz / MAX_LEN;
-    // auto x = model_config.hidden_size / model_config.num_heads * 2;
     auto len = token_length * bytes;
     bm_memcpy_d2d(handle, cache.device_mem, sz - len, cache.device_mem, 0, len);
 }
 
-int WizardCoderImpl::forward_next() {
+int WizardCoder::forward_next() {
     int                pid = token_length - 1;
     std::vector<void*> input_pid_data{&pid};
     std::vector<int>   embedding_inputs_num{1};
@@ -446,7 +509,7 @@ int WizardCoderImpl::forward_next() {
         outputs_block.push_back(blocks_cache[0].current_cache[i]);
     }
 
-    for (int i = 0; i < model_config.num_layers; i++) {
+    for (int i = 0; i < NUM_LAYERS; i++) {
         auto name = std::string{"block_cache_"} + std::to_string(i);
 
         for (int j = 0; j < num_device; j++) {
@@ -517,59 +580,20 @@ int WizardCoderImpl::forward_next() {
     return token;
 }
 
-std::vector<int> WizardCoderModel::encode(std::string_view input_str) {
-    return tokenizer.encode(input_str);
-}
-
-void WizardCoderModel::init(
-        std::string_view        model_path,
-        const std::vector<int>& dev_ids) {
-    auto ctx = WizardCoderImpl::from_pretrained(model_path, dev_ids);
-    if (!ctx) std::cerr << FRED("Ctx Error\n");
-    inner = std::move(ctx.value());
-    tokenizer = std::move(GPT2Tokenizer::from_pretrained(model_path).value());
-}
-
-std::optional<WizardCoderModel> WizardCoderModel::from_pretrained(
-        std::string_view        model_path,
-        const std::vector<int>& dev_ids) {
-    WizardCoderModel model;
-    auto inner = WizardCoderImpl::from_pretrained(model_path, dev_ids);
-    if (inner == std::nullopt) return std::nullopt;
-    model.inner = std::move(inner.value());
-
-    auto tokenizer = GPT2Tokenizer::from_pretrained(model_path);
-    if (tokenizer == std::nullopt) return std::nullopt;
-
-    model.tokenizer = std::move(tokenizer.value());
-
-    return model;
-}
-
-std::string WizardCoderModel::build_prompt(std::string_view input_str) const {
+std::string WizardCoder::build_prompt(std::string_view input_str) const {
     return "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
            "### Instruction:\n" +
             std::string{input_str} + "\n\n### Response:";
 }
 
-std::string WizardCoderModel::build_evaluation_prompt(
-        std::string_view input_str) const {
-    return "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
-           "### Instruction:\n"
-           "Create a Python program for this problem:\n" +
-            std::string{input_str} +
-            "\n"
-            "### Response:";
-}
-
-void WizardCoderModel::stream_generate(
+void WizardCoder::stream_generate(
         const std::vector<int>& input_ids,
         int                     max_new_length) {
     int cnt = 1;
 
     auto const input_token_len = input_ids.size();
     auto       start_time = std::chrono::high_resolution_clock::now();
-    auto       token = inner.forward_first(input_ids);
+    auto       token = forward_first(input_ids);
 
     auto FTL = get_elapsed(start_time);
 
@@ -579,7 +603,7 @@ void WizardCoderModel::stream_generate(
         auto result = tokenizer.decode_id(token, true);
         if (result == "<|endoftext|>") break;
         std::cout << result << std::flush;
-        token = inner.forward_next();
+        token = forward_next();
     }
 
     auto total = get_elapsed(start_time);
@@ -590,33 +614,96 @@ void WizardCoderModel::stream_generate(
               << FYEL(" Token/Sec\n");
 }
 
-std::string WizardCoderModel::generate(
-        const std::vector<int>& input_ids,
-        int                     max_new_length) {
-    int cnt = 1;
+void WizardCoder::answer(std::string_view input_str, int max_new_length) {
+    auto prompt = build_prompt(input_str);
+    auto input_ids = tokenizer.encode(prompt);
+    stream_generate(input_ids, max_new_length);
+}
 
-    auto const input_token_len = input_ids.size();
-    auto       start_time = std::chrono::high_resolution_clock::now();
-    auto       token = inner.forward_first(input_ids);
+void WizardCoder::chat() {
+    while (true) {
+        std::cout << "\nQuestion: ";
+        std::string input_str;
+        std::getline(std::cin, input_str);
+        if (input_str == "exit") {
+            break;
+        }
 
-    std::string res;
-
-    auto FTL = get_elapsed(start_time);
-
-    start_time = std::chrono::high_resolution_clock::now();
-
-    while (++cnt < max_new_length && cnt + input_token_len <= MAX_LEN) {
-        auto result = tokenizer.decode_id(token, true);
-        if (result == "<|endoftext|>") break;
-        res += result;
-        token = inner.forward_next();
+        std::cout << "\nAnswer: " << std::flush;
+        answer(input_str);
+        std::cout << std::endl;
     }
+}
 
-    auto total = get_elapsed(start_time);
+static void split(
+        const std::string&        s,
+        const std::string&        delim,
+        std::vector<std::string>& ret) {
+    size_t last = 0;
+    size_t index = s.find_first_of(delim, last);
+    while (index != std::string::npos) {
+        ret.push_back(s.substr(last, index - last));
+        last = index + 1;
+        index = s.find_first_of(delim, last);
+    }
+    if (last < s.length()) {
+        ret.push_back(s.substr(last));
+    }
+}
 
-    std::cout << FYEL("\n\nInference Time: ") << (total + FTL)
-              << FYEL(" ms\nToken: ") << cnt << FYEL(" FTL: ") << FTL
-              << FYEL(" ms\nRate: ") << (cnt - 1) * 1000.0 / total
-              << FYEL(" Token/Sec\n");
-    return res;
+static std::vector<int> parseCascadeDevices(const std::string& str) {
+    std::vector<int>         devices;
+    std::vector<std::string> sub_str;
+    split(str, ",", sub_str);
+    for (auto& s : sub_str) {
+        devices.push_back(std::atoi(s.c_str()));
+    }
+    return devices;
+}
+
+void processArguments(
+        int               argc,
+        char*             argv[],
+        std::string&      llama_model,
+        std::vector<int>& devices) {
+    struct option longOptions[] = {
+            {"model", required_argument, nullptr, 'm'},
+            {"dev_id", required_argument, nullptr, 'd'},
+            {nullptr, 0, nullptr, 0}};
+
+    int optionIndex = 0;
+    int option;
+
+    while ((option = getopt_long(
+                    argc, argv, "m:d:", longOptions, &optionIndex)) != -1) {
+        switch (option) {
+            case 'm':
+                llama_model = optarg;
+                break;
+            case 'd':
+                devices = parseCascadeDevices(optarg);
+                break;
+            case '?':
+                exit(EXIT_FAILURE);
+            default:
+                exit(EXIT_FAILURE);
+        }
+    }
+}
+
+int main(int argc, char** argv) {
+    printf("Demo for Wizardcoder-15B in BM1684X\n");
+
+    std::string      wizardcoder_model = "wizardcoder-15b_int4_1dev.bmodel";
+    std::vector<int> devices = {0};
+
+    processArguments(argc, argv, wizardcoder_model, devices);
+
+    printf("Init Environment ...\n");
+    WizardCoder model;
+    model.init(wizardcoder_model, devices);
+
+    model.chat();
+
+    return 0;
 }
