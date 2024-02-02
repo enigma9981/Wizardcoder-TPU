@@ -1,4 +1,5 @@
 import argparse
+import os
 from transformers import AutoModelForCausalLM, AutoTokenizer
 import torch
 from torch import nn
@@ -15,6 +16,9 @@ args = parser.parse_args()
 model_path = args.model_path
 MAX_LEN = args.max_length
 onnx_model_path = f'./tmp'
+
+if not os.path.exists(onnx_model_path):
+    os.makedirs(onnx_model_path)
 
 tokenizer = AutoTokenizer.from_pretrained(model_path, trust_remote_code=True)
 omodel = AutoModelForCausalLM.from_pretrained(
