@@ -31,7 +31,7 @@ make
 demo/build/wizardcoder -m /path/to/bmodel -d 0
 ```
 
-- -m 指定bmodel的位置，在bmodel的同级目录下，需要有```vovab```目录的两个```vocab.json```和```merges.txt```，作为tokenzier需要的文件
+- -m 指定bmodel的位置，在bmodel的同级目录下，需要有```vocab```目录的两个```vocab.json```和```merges.txt```，作为tokenzier需要的文件
 - -d 指定推理使用的芯片，默认id是0，如果需要在多芯片上推理，请使用逗号分割，如：-d 0,1,2,3
 
 ## 模型转换
@@ -40,6 +40,8 @@ demo/build/wizardcoder -m /path/to/bmodel -d 0
 ### 环境
 - python >= 3.11
 - torch >= 2.1
+
+
 python3.10和较低版本的torch可能会导致一些预想外的错误，建议使用较新的3.11和2.1版本的torch
 
 ### 修改模型文件
