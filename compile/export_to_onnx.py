@@ -269,9 +269,9 @@ def convert_lm_head():
 
 if __name__ == "__main__":
     for i in range(num_layers):
-        print(f'Convert {i}/{num_layers}\'s block...')
+        print(f'Convert {i + 1}/{num_layers}\'s block...')
         convert_block(i)
-        print(f'Convert {i}/{num_layers}\'s block cache...')
+        print(f'Convert {i + 1}/{num_layers}\'s block cache...')
         convert_block_cache(i)
     print(f'Convert embedding')
     convert_embedding()
