@@ -12,7 +12,7 @@
 
 - 支持C++20标准的gcc或clang编译器
 - 如果不使用```demo/libsophon_pcie```的libsophon或者需要特定版本的libsophon，需要在下面编译时指定```LIBSOPHON_DIR```
-- 转换好的Wizardcoder-15B.bmodel文件，需要和本仓库中```vocab```目录下的两个文件放在一起。
+- 转换好的Wizardcoder-15B.bmodel文件，需要和本仓库中```vocab```目录下的两个文件放在一起。模型转换过程可以参考下文
 
 ### Build
 
@@ -26,9 +26,13 @@ make
 
 #### C++
 完成上文的编译过程后，生成```demo/build/wizardcoder```可执行文件，它可以完成加载bmodel并在```BM1684X```设备上进行推理。示例：
+
 ```shell
 demo/build/wizardcoder -m /path/to/bmodel -d 0
 ```
+
+- -m 指定bmodel的位置，在bmodel的同级目录下，需要有```vovab```目录的两个```vocab.json```和```merges.txt```，作为tokenzier需要的文件
+- -d 指定推理使用的芯片，默认id是0，如果需要在多芯片上推理，请使用逗号分割，如：-d 0,1,2,3
 
 ## 模型转换
 
