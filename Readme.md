@@ -70,7 +70,7 @@ git clone https://huggingface.co/WizardLM/WizardCoder-15B-V1.0
 
 ### 2. 下载本项目`Wizardcoder-TPU`
 
-下载本项目，并导出所有的ONNX（其中需要将本项目`compile`路径下的`modeling_gpt_bigcode.py`文件替换到`transformers`的文件夹下，如下：
+下载本项目，并导出所有的ONNX（其中需要将本项目`compile`路径下的`modeling_gpt_bigcode.py`文件替换到`transformers`的文件夹下，具体步骤如下：
 
 #### clone本工程
 ``` shell
@@ -83,7 +83,8 @@ cd Wizardcoder-TPU
 - 使用提供的```compile/modeling_gpt_bigcode.py```替换```python3.11/site-packages/transformers/models/gpt_bigcode/```下的同名文件
 - 使用python3.10和torch2.0可能会导致预料之外的错误，目前我们建议在docker容器外将模型导出为onnx。后续会尝试解决这个问题，使全流程都在docker容器内部，保持一致。
 - 如果在docker容器外部进行转换，需要的torch版本不低于2.1, python版本不低于3.11，推荐使用conda搭建一个临时的环境，导出后即可删除
-### 导出ONNX格式模型
+
+#### 导出ONNX格式模型
 ```shell
 python export_to_onnx.py --model_path your_model_path
 ```
