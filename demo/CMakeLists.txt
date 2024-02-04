@@ -6,10 +6,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE "Release")
 project(wizardocder-tpu)
 
-
-if(NOT DEFINED LIBSOPHON_DIR)
-    set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/lib_pcie CACHE STRING "The directory of libsophon")
+if (NOT DEFINED TARGET_ARCH)
+    set(TARGET_ARCH pcie)
 endif()
+
+
+if(NOT DEFINED LIBSOPHON_DIR AND ${TARGET_ARCH} STREQUAL "pcie")
+  set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/lib_pcie CACHE STRING "The directory of libsophon")
+endif()
+
+if(${TARGET_ARCH} STREQUAL "soc")
+  set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/lib_soc CACHE STRING "The directory of libsophon")
+endif()
+
 message(STATUS "LIBSOPHON_DIR is set to: ${LIBSOPHON_DIR}")
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall")
@@ -41,7 +50,6 @@ FetchContent_Declare(
 
 
 FetchContent_MakeAvailable(simdjson cnpy ctre)
-
 
 
 add_executable(wizardcoder demo.cpp gpt2tokenizer.cc)

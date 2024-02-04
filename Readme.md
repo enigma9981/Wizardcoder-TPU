@@ -146,23 +146,13 @@ cd build
 cmake ..
 make
 ```
-### SOC版本（交叉编译）
 
-```shell
-export CC=dir_to_cross_build_toolchain/gcc
-export CXX=dir_to_cross_build_toolchain/g++
-cd Wizardcoder-TPU/demo
-mkdir build
-cd build
-cmake .. -DLIBSOPHON_DIR=../lib_soc
-make
-```
 ### SOC版本（在SOC设备上编译）
 ```shell
 cd Wizardcoder-TPU/demo
 mkdir build
 cd build
-cmake .. -DLIBSOPHON_DIR=../lib_soc
+cmake .. -DTARGET_ARCH=soc
 make
 ```
 
