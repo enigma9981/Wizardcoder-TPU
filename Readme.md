@@ -81,14 +81,12 @@ cd Wizardcoder-TPU
 #### 修改模型文件
 - 使用```pip show transformers```找到```transformers```的位置
 - 使用提供的```compile/modeling_gpt_bigcode.py```替换```python3.11/site-packages/transformers/models/gpt_bigcode/```下的同名文件
-- 使用python3.10和torch2.0可能会导致预料之外的错误，目前我们建议在docker容器外将模型导出为onnx。后续会尝试解决这个问题，使全流程都在docker容器内部，保持一致。
-- 如果在docker容器外部进行转换，需要的torch版本不低于2.1, python版本不低于3.11，推荐使用conda搭建一个临时的环境，导出后即可删除
+
 
 #### 导出ONNX格式模型
 ```shell
 python export_to_onnx.py --model_path your_model_path
 ```
-- 目前建议本步骤在docker外进行
 - your_model_path 指的是原模型下载后的地址, 如:"../../WizardCoder-15B-V1.0/"
 - 如果你想要debug，而不是一下子生成完成全部的onnx模型，可以将36行的num_layers改成1, 结合144行的函数对比单个block情况下是否可以和pytroch版本对齐
 - 脚本运行完毕后会在```./tmp/```下生成大量ONNX模型，用于后续在TPU上进行转换
@@ -224,3 +222,9 @@ demo/build/wizardcoder -m /path/to/bmodel -d 0
         return attn_weight @ value
     
     ```
+2) 修改如下
+    ```python
+    # self.attn = GPTBIGCODE_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx=layer_idx)
+    self.attn = GPTBigCodeSdpaAttention(config, layer_idx=layer_idx)
+    ```
+    大概在673左右，强制使用GPTBigCodeSdpaAttention，便于计算

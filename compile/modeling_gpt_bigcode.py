@@ -375,8 +375,10 @@ class GPTBigCodeFlashAttention2(GPTBigCodeAttention):
         # cast them back in float16 just to be sure everything works as expected.
         input_dtype = query.dtype
         if input_dtype == torch.float32:
+            if torch.is_autocast_enabled():
+                target_dtype = torch.get_autocast_gpu_dtype()
             # Handle the case where the model is quantized
-            if hasattr(self.config, "_pre_quantization_dtype"):
+            elif hasattr(self.config, "_pre_quantization_dtype"):
                 target_dtype = self.config._pre_quantization_dtype
             else:
                 target_dtype = self.c_attn.weight.dtype
@@ -621,12 +623,9 @@ class GPTBigCodeSdpaAttention(GPTBigCodeAttention):
                 .transpose(1, 2)
                 .split((self.head_dim, 2 * self.head_dim), dim=3)
             )
-            
-        
 
         if layer_past is not None:
             key_value = torch.cat((layer_past, key_value), dim=-2)
-        
         present = key_value if use_cache else None
 
         key, value = key_value.split((self.head_dim, self.head_dim), dim=-1)
@@ -691,8 +690,8 @@ class GPTBigCodeBlock(nn.Module):
 
         self.ln_1 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
 
-        self.attn = GPTBIGCODE_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx=layer_idx)
-
+       #  self.attn = GPTBIGCODE_ATTENTION_CLASSES[config._attn_implementation](config, layer_idx=layer_idx)
+        self.attn = GPTBigCodeSdpaAttention(config, layer_idx=layer_idx)
         self.ln_2 = nn.LayerNorm(hidden_size, eps=config.layer_norm_epsilon)
 
         if config.add_cross_attention:
@@ -1385,9 +1384,10 @@ class GPTBigCodeForSequenceClassification(GPTBigCodePreTrainedModel):
             sequence_lengths = -1
         else:
             if input_ids is not None:
-                sequence_lengths = (torch.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1).to(
-                    logits.device
-                )
+                # if no pad token found, use modulo instead of reverse indexing for ONNX compatibility
+                sequence_lengths = torch.eq(input_ids, self.config.pad_token_id).int().argmax(-1) - 1
+                sequence_lengths = sequence_lengths % input_ids.shape[-1]
+                sequence_lengths = sequence_lengths.to(logits.device)
             else:
                 sequence_lengths = -1
                 logger.warning(
@@ -1517,6 +1517,10 @@ class GPTBigCodeForTokenClassification(GPTBigCodePreTrainedModel):
             attentions=transformer_outputs.attentions,
         )
 
+
+
+
+
 def _scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0.0, is_causal=False, scale=None) -> torch.Tensor:
     L, S = query.size(-2), key.size(-2)
     scale_factor = 1 / math.sqrt(query.size(-1)) if scale is None else scale
@@ -1529,7 +1533,7 @@ def _scaled_dot_product_attention(query, key, value, attn_mask=None, dropout_p=0
 
     if attn_mask is not None:
         attn_bias = attn_mask
-    
+
     attn_weight = query @ key.transpose(-2, -1) * scale_factor
     attn_weight += attn_bias
     attn_weight = torch.softmax(attn_weight, dim=-1)
