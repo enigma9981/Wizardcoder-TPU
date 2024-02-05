@@ -54,7 +54,7 @@
 
 - 支持C++17标准的gcc或clang编译器
 - 如果不使用```demo/libsophon_pcie```的libsophon或者需要特定版本的libsophon，需要在下面编译时指定```LIBSOPHON_DIR```
-- 转换好的Wizardcoder-15B.bmodel文件，需要和本仓库中```vocab```目录下的两个文件放在一起。模型转换过程可以参考下文
+- 转换好的Wizardcoder-15B.bmodel文件
 
 ## 开发环境准备
 
@@ -68,7 +68,19 @@ git clone https://huggingface.co/WizardLM/WizardCoder-15B-V1.0
 该工程比较大，会花较长时间。
 
 
-### 2. 下载本项目`Wizardcoder-TPU`
+
+### 2. 下载docker，启动容器
+
+``` shell
+docker pull sophgo/tpuc_dev:latest
+
+# myname1234 is just an example, you can set your own name
+docker run --privileged --name myname1234 -v $PWD:/workspace -it sophgo/tpuc_dev:latest
+```
+后文假定环境都在docker下进行
+
+
+### 3. 下载本项目`Wizardcoder-TPU`
 
 下载本项目，并导出所有的ONNX（其中需要将本项目`compile`路径下的`modeling_gpt_bigcode.py`文件替换到`transformers`的文件夹下，具体步骤如下：
 
@@ -100,15 +112,6 @@ python export_to_onnx.py --model_path your_model_path
 - 默认长度MAX_LEN为512，如果需要修改，可以使用`--max_length length_you_want`参数进行修改
 - 脚本运行完毕后会在```./tmp/```下生成大量ONNX模型，用于后续在TPU上进行转换
 
-### 3. 下载docker，启动容器
-
-``` shell
-docker pull sophgo/tpuc_dev:latest
-
-# myname1234 is just an example, you can set your own name
-docker run --privileged --name myname1234 -v $PWD:/workspace -it sophgo/tpuc_dev:latest
-```
-后文假定环境都在docker的`/workspace`目录。
 
 ### 4. 下载`TPU-MLIR`代码并编译
 
@@ -162,7 +165,8 @@ cmake ..
 make
 ```
 - 程序会自动探测编译环境的体系结构，自动链接相关运行时，所以编译代码是相同的
-- 编译生成`wizardcoder`可执行程序，将本工程目录下的`vocab/merges.txt`、`vocab/vocab.json`和生成的`wizardcoder-15B_int4.bmodel`拷贝到同一个目录下就可以执行了。
+- 编译生成`wizardcoder`可执行程序。
+- 为了保证模型可以正常运行，在编译后请不要挪动目录`vocab`以及之下的内容
 
 完成上文的编译过程后，生成```demo/build/wizardcoder```可执行文件，它可以完成加载bmodel并在```BM1684X```设备上进行推理。示例：
 
@@ -170,8 +174,13 @@ make
 demo/build/wizardcoder -m /path/to/bmodel -d 0
 ```
 
-- -m 指定bmodel的位置，在bmodel的同级目录下，需要有```vocab```目录的两个```vocab.json```和```merges.txt```，作为tokenzier需要的文件
+- -m 指定bmodel的位置
 - -d 指定推理使用的芯片，默认id是0，如果需要在多芯片上推理，请使用逗号分割，如：-d 0,1,2,3
+
+示例：
+```shell
+./wizardcoder -m ../../../models/WizardCoder-15B-V1.0/test/wizardcoder-15B-int4_rc1.bmodel -d 0
+```
 
 ## 运行效果
 
@@ -183,16 +192,16 @@ demo/build/wizardcoder -m /path/to/bmodel -d 0
 
 ### demo程序无法正常运行
 
-    如果demo程序拷贝到运行环境提示无法运行，比如接口找不到等等错误。
+如果demo程序拷贝到运行环境提示无法运行，比如接口找不到等等错误。
 原因是运行环境的库有所不同，将demo中的`lib_pcie`（PCIE）或者 `lib_soc`(SoC)里面的so文件拷贝到运行环境，链接到里面的so即可。
 ### 转换模型时需要调试
 
-    - 如果你想要debug，而不是一下子生成完成全部的onnx模型，可以将`export_to_onnx.py`中36行的num_layers改成1, 结合144行的函数对比单个block情况下是否可以和pytroch版本对齐
-    - 想要验证python环境是否可以正常运行，可以使用`export_to_onnx.py`中的`net_test_fixed_length`函数进行测试
+- 如果你想要debug，而不是一下子生成完成全部的onnx模型，可以将`export_to_onnx.py`中36行的num_layers改成1, 结合144行的函数对比单个block情况下是否可以和pytroch版本对齐
+- 想要验证python环境是否可以正常运行，可以使用`export_to_onnx.py`中的`net_test_fixed_length`函数进行测试
 
 ### 在多颗芯片上进行推理
 
-    后续会支持多芯上的推理，请使用```./compile.sh --mode [F16/int8/int4] --num_device [2/4/8]```进行转换，编译完成后最终会在compile路径下生成名为wizardcoder-15B_{X}_{Y}dev.bmodel的模型文件，其中X代表量化方式，其值有F16/int8/int4等，Y代表使用的芯片个数，其值可能有1/2/4/8等。
+后续会支持多芯上的推理，请使用```./compile.sh --mode [F16/int8/int4] --num_device [2/4/8]```进行转换，编译完成后最终会在compile路径下生成名为wizardcoder-15B_{X}_{Y}dev.bmodel的模型文件，其中X代表量化方式，其值有F16/int8/int4等，Y代表使用的芯片个数，其值可能有1/2/4/8等。
 
 ### Wizardcoder-TPU做了哪些修改
 

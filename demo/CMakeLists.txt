@@ -19,6 +19,9 @@ endif()
 
 message(STATUS "LIBSOPHON_DIR is set to: ${LIBSOPHON_DIR}")
 
+set(VOCAB_DIR ${CMAKE_SOURCE_DIR}/../vocab)
+
+
 
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall")
@@ -56,3 +59,4 @@ add_executable(wizardcoder demo.cpp gpt2tokenizer.cc)
 target_include_directories(wizardcoder PRIVATE ${LIBSOPHON_DIR}/include)
 target_link_directories(wizardcoder PRIVATE ${LIBSOPHON_DIR}/lib)
 target_link_libraries(wizardcoder PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy)
+target_compile_definitions(wizardcoder PRIVATE "VOCAB_DIR=\"${VOCAB_DIR}/vocab.json\"")

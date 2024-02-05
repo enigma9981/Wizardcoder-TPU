@@ -1,10 +1,9 @@
 
-
-#include <assert.h>
 #include <bits/stdc++.h>
 #include <bmlib_runtime.h>
 #include <bmruntime_interface.h>
 #include <getopt.h>
+#include <cstdio>
 #include "include/tokenizer.h"
 
 static const int   NUM_LAYERS = 40;
@@ -93,7 +92,7 @@ struct WizardCoder {
 void WizardCoder::init(
         std::string_view        model_path,
         const std::vector<int>& devids) {
-    auto tokenizer = GPT2Tokenizer::from_pretrained(model_path);
+    auto tokenizer = GPT2Tokenizer::from_pretrained(VOCAB_DIR);
     if (!tokenizer) {
         std::cerr << "No tokenizer\n";
     }
@@ -622,6 +621,7 @@ void processArguments(
 
 int main(int argc, char** argv) {
     printf("Demo for Wizardcoder-15B in BM1684X\n");
+    printf("The location of vocab.json is: %s\n", VOCAB_DIR);
 
     std::string      wizardcoder_model = "wizardcoder-15b_int4_1dev.bmodel";
     std::vector<int> devices = {0};
