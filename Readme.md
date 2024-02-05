@@ -79,16 +79,22 @@ cd Wizardcoder-TPU
 ```
 
 #### 修改模型文件
-- 使用```pip show transformers```找到```transformers```的位置
-- 使用提供的```compile/modeling_gpt_bigcode.py```替换```python3.11/site-packages/transformers/models/gpt_bigcode/```下的同名文件
-
+- 使用```pip show transformers```找到```transformers```的位置，例如：`/usr/local/lib/python3.10/dist-packages`（不同的Python版本和系统可能不同）
+- 使用提供的```compile/modeling_gpt_bigcode.py```替换上文中找到的位置：```/usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/```下的同名文件
+示例：
+```shell
+cd Wizardcoder-TPU
+pip show transformers
+cp compile/modeling_gpt_bigcode.py /usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/
+```
+- PS：**不一定是/usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py这个路径，建议替换前先pip show transformers查看一下**
 
 #### 导出ONNX格式模型
 ```shell
 python export_to_onnx.py --model_path your_model_path
 ```
 - your_model_path 指的是原模型下载后的地址, 如:"../../WizardCoder-15B-V1.0/"
-- 如果你想要debug，而不是一下子生成完成全部的onnx模型，可以将36行的num_layers改成1, 结合144行的函数对比单个block情况下是否可以和pytroch版本对齐
+- 默认长度MAX_LEN为512，如果需要修改，可以使用`--max_length length_you_want`参数进行修改
 - 脚本运行完毕后会在```./tmp/```下生成大量ONNX模型，用于后续在TPU上进行转换
 
 ### 3. 下载docker，启动容器
@@ -117,9 +123,9 @@ source ./envsetup.sh
 注意此时在Docker环境workspace目录。
 
 ### 注册所需的环境变量
-```shell
-source dir_to_tpu_mlir/envsetup.sh
-```
+- 找到并进入编译完成后，或者解压完成后的`tpu-mlir`安装目录
+- 执行`source ./envsetup.sh`
+注册所需的环境变量
 ### 开始模型转换
 
 在`Wizardcoder-TPU/compile`目录下，执行：
@@ -128,9 +134,7 @@ source dir_to_tpu_mlir/envsetup.sh
 ```
 稍等片刻即可导出int4量化后的bmodel文件
 
-
 - 受TPU内存的限制```./compile.sh```目前仅支持在单芯上进行INT4量化，执行```./compile.sh --mode int4```后会在目录下生成```wizardcoder-15B_int4.bmodel```文件
-- 后续会支持多芯上的推理，请使用```./compile.sh --mode [F16/int8/int4] --num_device [2/4/8]```进行转换，编译完成后最终会在compile路径下生成名为wizardcoder-15B_{X}_{Y}dev.bmodel的模型文件，其中X代表量化方式，其值有F16/int8/int4等，Y代表使用的芯片个数，其值可能有1/2/4/8等。
 - 生成bmodel耗时大概3小时以上，建议64G内存以及300G以上磁盘空间，不然很可能OOM或者no space left
 
 ## 编译程序(C++)
@@ -176,9 +180,16 @@ demo/build/wizardcoder -m /path/to/bmodel -d 0
 
 ### demo程序无法正常运行
 
-如果demo程序拷贝到运行环境提示无法运行，比如接口找不到等等错误。
+    如果demo程序拷贝到运行环境提示无法运行，比如接口找不到等等错误。
 原因是运行环境的库有所不同，将demo中的`lib_pcie`（PCIE）或者 `lib_soc`(SoC)里面的so文件拷贝到运行环境，链接到里面的so即可。
+### 转换模型时需要调试
 
+    - 如果你想要debug，而不是一下子生成完成全部的onnx模型，可以将`export_to_onnx.py`中36行的num_layers改成1, 结合144行的函数对比单个block情况下是否可以和pytroch版本对齐
+    - 想要验证python环境是否可以正常运行，可以使用`export_to_onnx.py`中的`net_test_fixed_length`函数进行测试
+
+### 在多颗芯片上进行推理
+
+    后续会支持多芯上的推理，请使用```./compile.sh --mode [F16/int8/int4] --num_device [2/4/8]```进行转换，编译完成后最终会在compile路径下生成名为wizardcoder-15B_{X}_{Y}dev.bmodel的模型文件，其中X代表量化方式，其值有F16/int8/int4等，Y代表使用的芯片个数，其值可能有1/2/4/8等。
 
 ### Wizardcoder-TPU做了哪些修改
 

@@ -6,20 +6,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_BUILD_TYPE "Release")
 project(wizardocder-tpu)
 
-if (NOT DEFINED TARGET_ARCH)
-    set(TARGET_ARCH pcie)
-endif()
+message(STATUS "Host arch is: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 
 
-if(NOT DEFINED LIBSOPHON_DIR AND ${TARGET_ARCH} STREQUAL "pcie")
+if(${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
   set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/lib_pcie CACHE STRING "The directory of libsophon")
-endif()
-
-if(${TARGET_ARCH} STREQUAL "soc")
+elseif(${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "aarch64")
   set(LIBSOPHON_DIR ${CMAKE_SOURCE_DIR}/lib_soc CACHE STRING "The directory of libsophon")
+else()
+  message(FATAL_ERROR "Detected architecture is neither x86_64 nor aarch64, Exit")
 endif()
 
 message(STATUS "LIBSOPHON_DIR is set to: ${LIBSOPHON_DIR}")
+
+
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall")
 

@@ -15,6 +15,8 @@ parser.add_argument('--max_length', type=int, default=512,
 args = parser.parse_args()
 model_path = args.model_path
 MAX_LEN = args.max_length
+# 默认转换的MAX_LEN为512, 后续可以按需修改
+
 onnx_model_path = f'./tmp'
 
 if not os.path.exists(onnx_model_path):
@@ -220,7 +222,7 @@ def convert_block(layer_id):
 
 def convert_block_cache(layer_id):
     hidden_states = torch.rand((1, 1, hidden_size))
-    past_layer = torch.rand((1, 512, 256))
+    past_layer = torch.rand((1, MAX_LEN, 256))
     attention_mask = -1000 * torch.ones((1, MAX_LEN + 1))
     attention_mask[:, MAX_LEN - 99 + 1:] = 0
 
