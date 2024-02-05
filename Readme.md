@@ -81,7 +81,10 @@ cd Wizardcoder-TPU
 #### 修改模型文件
 - 使用```pip show transformers```找到```transformers```的位置，例如：`/usr/local/lib/python3.10/dist-packages`（不同的Python版本和系统可能不同）
 - 使用提供的```compile/modeling_gpt_bigcode.py```替换上文中找到的位置：```/usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/```下的同名文件
+
+
 示例：
+
 ```shell
 cd Wizardcoder-TPU
 pip show transformers
@@ -155,11 +158,11 @@ make
 cd Wizardcoder-TPU/demo
 mkdir build
 cd build
-cmake .. -DTARGET_ARCH=soc
+cmake ..
 make
 ```
-
-编译生成`wizardcoder`可执行程序，将本工程目录下的`vocab/merges.txt`、`vocab/vocab.json`和生成的`wizardcoder-15B_int4.bmodel`拷贝到同一个目录下就可以执行了。
+- 程序会自动探测编译环境的体系结构，自动链接相关运行时，所以编译代码是相同的
+- 编译生成`wizardcoder`可执行程序，将本工程目录下的`vocab/merges.txt`、`vocab/vocab.json`和生成的`wizardcoder-15B_int4.bmodel`拷贝到同一个目录下就可以执行了。
 
 完成上文的编译过程后，生成```demo/build/wizardcoder```可执行文件，它可以完成加载bmodel并在```BM1684X```设备上进行推理。示例：
 
