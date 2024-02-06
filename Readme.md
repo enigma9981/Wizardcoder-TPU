@@ -91,9 +91,9 @@ cd Wizardcoder-TPU
 ```
 
 #### 修改模型文件
+- 安装所需依赖：使用`pip install -r requirements.txt`安装所需依赖
 - 使用```pip show transformers```找到```transformers```的位置，例如：`/usr/local/lib/python3.10/dist-packages`（不同的Python版本和系统可能不同）
 - 使用提供的```compile/modeling_gpt_bigcode.py```替换上文中找到的位置：```/usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/```下的同名文件
-
 
 示例：
 
@@ -103,6 +103,7 @@ pip show transformers
 cp compile/modeling_gpt_bigcode.py /usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/
 ```
 - PS：**不一定是/usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py这个路径，建议替换前先pip show transformers查看一下**
+- 在完成模型文件修改后，验证环境是否搭建完成，可以尝试[进行调试](###转换模型时需要调试)
 
 #### 导出ONNX格式模型
 ```shell
@@ -195,9 +196,9 @@ demo/build/wizardcoder -m /path/to/bmodel -d 0
 如果demo程序拷贝到运行环境提示无法运行，比如接口找不到等等错误。
 原因是运行环境的库有所不同，将demo中的`lib_pcie`（PCIE）或者 `lib_soc`(SoC)里面的so文件拷贝到运行环境，链接到里面的so即可。
 ### 转换模型时需要调试
-
-- 如果你想要debug，而不是一下子生成完成全部的onnx模型，可以将`export_to_onnx.py`中36行的num_layers改成1, 结合144行的函数对比单个block情况下是否可以和pytroch版本对齐
 - 想要验证python环境是否可以正常运行，可以使用`export_to_onnx.py`中的`net_test_fixed_length`函数进行测试
+- 如果你想要debug，而不是一下子生成完成全部的onnx模型，可以将`export_to_onnx.py`中36行的num_layers改成1, 结合144行的函数对比单个block情况下是否可以和pytroch版本对齐
+
 
 ### 在多颗芯片上进行推理
 
