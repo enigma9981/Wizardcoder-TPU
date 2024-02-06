@@ -103,7 +103,7 @@ pip show transformers
 cp compile/modeling_gpt_bigcode.py /usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/
 ```
 - PS：**不一定是/usr/local/lib/python3.10/dist-packages/transformers/models/gpt_bigcode/modeling_gpt_bigcode.py这个路径，建议替换前先pip show transformers查看一下**
-- 在完成模型文件修改后，验证环境是否搭建完成，可以尝试[进行调试](###转换模型时需要调试)
+- 在完成模型文件修改后，验证环境是否搭建完成，可以参考后文：常见问题-转换模型时需要调试
 
 #### 导出ONNX格式模型
 ```shell
