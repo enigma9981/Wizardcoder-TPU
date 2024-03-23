@@ -24,4 +24,7 @@ baks
 
 third_party
 
+.clang-format
+
 evals/*
+

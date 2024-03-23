@@ -3,7 +3,10 @@
 
 #include <bmlib_runtime.h>
 #include <bmruntime_interface.h>
+#include <onnxruntime_cxx_api.h>
+#include <array>
 #include <string_view>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
 #include "config.h"
@@ -49,6 +52,9 @@ struct WizardCoderImpl {
         std::vector<bm_tensor_t> attention_mask;
         std::vector<bm_tensor_t> hidden_states;
         std::vector<bm_tensor_t> current_cache;
+        // void inference(std::string_view model_path) ;
+
+        // ~WizardCoderBlockCache() {}
     };
 
     std::vector<WizardCoderBlock>      blocks;
@@ -73,9 +79,32 @@ struct WizardCoderImpl {
     void deinit();
 };
 
+struct OnnxruntimeImpl {
+    struct OnnxruntimeImplBase {
+        std::vector<std::array<int, 4>> input_tensors;
+        std::vector<std::array<int, 4>> output_tensors;
+    };
+
+    struct BlockCache : OnnxruntimeImplBase {
+        // std::vector<std::array<int, 4>> input_tensors;
+    };
+
+    OnnxruntimeImpl()
+            : m_memory_info(Ort::MemoryInfo::CreateCpu(
+                      OrtDeviceAllocator,
+                      OrtMemTypeCPU)) {}
+
+    Ort::MemoryInfo m_memory_info;
+};
+
+void WizardCoderBlockCache_onnx(
+        std::string_view model_path,
+        WizardCoderImpl::WizardCoderBlockCache&);
+
 struct WizardCoderModel {
     WizardCoderImpl inner;
     GPT2Tokenizer   tokenizer;
+    OnnxruntimeImpl wizardcoderonnx;
 
     static std::optional<WizardCoderModel> from_pretrained(
             std::string_view,

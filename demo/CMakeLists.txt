@@ -47,7 +47,15 @@ target_link_directories(tpuopt PRIVATE ${LIBSOPHON_DIR}/lib)
 
 
 
-target_link_libraries(tpuopt PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy)
+set(ONNXRUNTIME_DIR ${CMAKE_SOURCE_DIR}/demo/third_party/onnxruntime)
+include_directories(${ONNXRUNTIME_DIR}/include)
+
+
+
+
+
+
+target_link_libraries(tpuopt PRIVATE bmrt bmlib simdjson::simdjson ctre cnpy onnxruntime)
 
 add_subdirectory(bin)
 

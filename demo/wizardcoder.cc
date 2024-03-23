@@ -1,26 +1,10 @@
 #include "include/wizardcoder.h"
 #include <cnpy.h>
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <fstream>
-#include <iostream>
-#include <map>
-#include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <type_traits>
-#include <utility>
-#include <vector>
+#include <bits/stdc++.h>
 #include "bmdef.h"
 #include "bmlib_runtime.h"
 #include "bmruntime_interface.h"
 #include "include/config.h"
-#include "include/tokenizer.h"
 #include "include/utils.h"
 
 static constexpr int MAX_LEN = 512;

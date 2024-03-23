@@ -8,7 +8,6 @@
 
 namespace fs = std::filesystem;
 
-
 std::unordered_map<char, std::string> bytes_to_unicode() {
     static const std::unordered_map<char, std::string> code_map = {
             {33, "!"},  {34, "\""}, {35, "#"},  {36, "$"},  {37, "%"},
@@ -108,7 +107,7 @@ std::optional<GPT2Tokenizer> GPT2Tokenizer::from_pretrained(
                 {it.line.begin() + split_point + 1, it.line.end()}};
         bpe_ranks.emplace(std::move(p), it.i);
     }
-    
+
     result.m_bpe_ranks = std::move(bpe_ranks);
 
     simdjson::dom::parser  parser;
@@ -162,7 +161,6 @@ inline int get_charsize(char c) {
         return 4;
     return 1;
 }
-
 
 std::string GPT2Tokenizer::decode(
         const std::vector<int>& token_ids,
